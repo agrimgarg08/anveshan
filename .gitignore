@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (too large / not meant for git — track via README instead)
+data/raw/*
+data/processed/*
+data/synthetic/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/synthetic/.gitkeep
+
+# Model weights (large files — consider Git LFS if you must commit them)
+models/weights/*.pt
+models/weights/*.onnx
+!models/weights/.gitkeep
+
+# Ultralytics training runs
+runs/
+
+# Reports (sample outputs are fine to commit selectively, ignore bulk runs)
+reports/*.json
+reports/*.csv
+!reports/sample_report.json
+!reports/sample_report.csv
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp
+
+# Streamlit
+.streamlit/

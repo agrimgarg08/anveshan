@@ -1,0 +1,17 @@
+# YOLOv8 dataset config — fill in paths after exporting from Roboflow
+# Point train/val at the images folders from your Roboflow export
+
+path: ../../data/processed   # root dir (relative to this file)
+train: images/train
+val: images/val
+test: images/test            # optional, only used for final eval
+
+# Class list — adjust to match what you finalize in Roboflow
+names:
+  0: debris_net_or_pot
+  1: pipe_cylinder
+  2: shipwreck
+  3: unknown_anomaly
+
+# Example training command (run from repo root):
+#   yolo detect train data=models/train_configs/data.yaml model=yolov8n.pt epochs=50 imgsz=640 batch=16
