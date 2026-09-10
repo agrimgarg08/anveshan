@@ -1,4 +1,0 @@
-scenario,class,final_confidence,flagged_for_review,x,y,width,height,ping_number,latitude,longitude,timestamp
-Mixed Debris Field,debris_net_or_pot,88.7,false,92,112,108,82,26,13.083092,80.270901,2026-09-05T10:22:26Z
-Mixed Debris Field,pipe_cylinder,79.4,false,332,204,186,52,29,13.083131,80.270940,2026-09-05T10:22:29Z
-Mixed Debris Field,shipwreck,67.9,false,258,398,164,112,34,13.083196,80.271005,2026-09-05T10:22:34Z

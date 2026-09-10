@@ -20,6 +20,10 @@ const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ss
 export default function Dashboard() {
   const router = useRouter();
   const { authenticated, authReady } = useAuth();
+  const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
+  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png${
+    cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
+  }`;
   
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -441,12 +445,12 @@ export default function Dashboard() {
                     {result.report && result.report.length > 0 ? (
                       <MapContainer 
                         center={[result.report[0].latitude, result.report[0].longitude]} 
-                        zoom={16} 
+                        zoom={8} 
                         style={{ height: '100%', width: '100%' }}
                         className="z-0"
                       >
                         <TileLayer
-                          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                          url={cartoTileUrl}
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         />
                         {result.report.map((entry: any) => {

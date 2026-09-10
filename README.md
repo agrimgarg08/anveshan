@@ -54,7 +54,9 @@ pip install -r requirements.txt
 ```
 
 Copy `.env.example` to `.env`, then set the deployed Roboflow model ID and
-private API key. `.env` is ignored by Git and must never be committed.
+private API key. Also set `NEXT_PUBLIC_CARTO_API_KEY` with the key requested
+from https://carto.com/basemaps/apikey/ for the map tiles. `.env` is ignored by
+Git and must never be committed.
 For Vercel, set the same variables in the project Environment Variables.
 
 ```bash
