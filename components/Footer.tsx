@@ -2,7 +2,7 @@
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 py-6 border-t border-slate-200 dark:border-slate-900 bg-slate-50 dark:bg-slate-950 transition-colors">
+    <footer className="relative z-10 py-6 border-t border-slate-200 dark:border-slate-900 bg-transparent transition-colors">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
         
         {/* Left: Copyright */}

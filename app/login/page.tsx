@@ -39,14 +39,14 @@ export default function LoginPage() {
 
   if (!authReady || (authReady && authenticated)) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 transition-colors">
+      <main className="flex min-h-[70vh] items-center justify-center bg-transparent text-slate-500 dark:text-slate-400 transition-colors">
         <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </main>
     );
   }
 
   return (
-    <main className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950 px-6 py-12 text-slate-900 dark:text-slate-100 font-sans transition-colors">
+    <main className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-transparent px-6 py-12 text-slate-900 dark:text-slate-100 font-sans transition-colors">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

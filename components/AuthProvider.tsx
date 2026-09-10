@@ -5,6 +5,7 @@ import React, { createContext, useContext, useSyncExternalStore, useCallback } f
 interface AuthContextType {
   authenticated: boolean;
   authReady: boolean;
+  username: string | null;
   login: (username: string, password: string) => boolean;
   logout: () => void;
 }
@@ -12,6 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   authenticated: false,
   authReady: false,
+  username: null,
   login: () => false,
   logout: () => {},
 });
@@ -29,9 +31,12 @@ const getSnapshot = () => {
   return window.sessionStorage.getItem('anveshan-authenticated') === 'true';
 };
 
-const getServerSnapshot = () => {
-  return false;
+const getUserSnapshot = () => {
+  return window.sessionStorage.getItem('anveshan-username');
 };
+
+const getServerSnapshot = () => false;
+const getServerUserSnapshot = () => null;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isClient = useSyncExternalStore(
@@ -46,9 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getServerSnapshot
   );
 
-  const login = useCallback((username: string, password: string): boolean => {
-    if (username === 'admin' && password === 'anveshan2026') {
+  const username = useSyncExternalStore(
+    subscribe,
+    getUserSnapshot,
+    getServerUserSnapshot
+  );
+
+  const login = useCallback((user: string, pass: string): boolean => {
+    if (user === 'admin' && pass === 'anveshan2026') {
       window.sessionStorage.setItem('anveshan-authenticated', 'true');
+      window.sessionStorage.setItem('anveshan-username', user);
       window.dispatchEvent(new Event('anveshan-auth-change'));
       return true;
     }
@@ -57,11 +69,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     window.sessionStorage.removeItem('anveshan-authenticated');
+    window.sessionStorage.removeItem('anveshan-username');
     window.dispatchEvent(new Event('anveshan-auth-change'));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ authenticated, authReady: isClient, login, logout }}>
+    <AuthContext.Provider value={{ authenticated, authReady: isClient, username, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

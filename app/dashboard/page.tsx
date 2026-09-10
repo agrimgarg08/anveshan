@@ -238,14 +238,14 @@ export default function Dashboard() {
 
   if (!authReady || !authenticated) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 transition-colors">
+      <main className="flex min-h-[70vh] items-center justify-center bg-transparent text-slate-500 dark:text-slate-400 transition-colors">
         <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </main>
     );
   }
 
   return (
-    <div className="flex-1 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors">
+    <div className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors">
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 py-8">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           

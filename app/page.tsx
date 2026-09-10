@@ -6,23 +6,23 @@ import { ShieldCheck, MapPin, BarChart, ArrowRight } from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-cyan-500/30 overflow-x-hidden font-sans transition-colors">
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-slate-100 selection:bg-cyan-500/30 overflow-x-hidden font-sans transition-colors">
       {/* Hero Section */}
       <main className="relative z-10 pt-20 pb-24 lg:pt-28 lg:pb-32">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
             className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-tight text-slate-900 dark:text-slate-100"
           >
-            Clearer Oceans with <br />
+            Cleaner Oceans with <br />
             <span className="text-cyan-600 dark:text-cyan-400 font-yatra">
               अन्वेषण
             </span>
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
@@ -30,8 +30,8 @@ export default function LandingPage() {
           >
             An advanced AI-powered Side-Scan Sonar (SSS) analysis platform designed to detect, classify, and geotag marine debris in real-time.
           </motion.p>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
@@ -53,7 +53,7 @@ export default function LandingPage() {
       {/* Features Section */}
       <section id="features" className="relative z-10 py-32">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -63,10 +63,10 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Marine Surveyors</h2>
             <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Utilitarian design meets cutting-edge machine learning to deliver actionable insights from noisy sonar data.</p>
           </motion.div>
-          
+
           <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
             {/* Feature 1 */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
@@ -80,9 +80,9 @@ export default function LandingPage() {
               <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100">AI Detection</h3>
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">Automated YOLO-based inference filters out natural clutter like rocks to highlight man-made debris with high confidence.</p>
             </motion.div>
-            
+
             {/* Feature 2 */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
@@ -96,9 +96,9 @@ export default function LandingPage() {
               <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100">Geospatial Mapping</h3>
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">Instantly map detections from pixel space to real-world coordinates using simulated tow-path metadata.</p>
             </motion.div>
-            
+
             {/* Feature 3 */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
