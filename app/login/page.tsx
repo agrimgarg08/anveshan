@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (authReady && authenticated) {
-      router.replace('/dashboard');
+      router.replace('/console');
     }
   }, [authReady, authenticated, router]);
 
@@ -30,7 +30,7 @@ export default function LoginPage() {
     const success = login(username.trim(), password);
     if (success) {
       toast.success('Access granted. Redirecting to Console...');
-      router.push('/dashboard');
+      router.push('/console');
     } else {
       setAuthError('Invalid credentials. Please verify your username and password.');
       setIsSubmitting(false);
@@ -54,9 +54,12 @@ export default function LoginPage() {
         className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 sm:p-10 shadow-xl dark:shadow-2xl"
       >
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-yatra font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-wide pt-2 pb-1 drop-shadow-sm">
-            अन्वेषण
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-tight">
+            Welcome Back
           </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Please log in to continue to the console
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -107,7 +110,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-3 rounded-xl bg-cyan-600 dark:bg-cyan-500 hover:bg-cyan-500 dark:hover:bg-cyan-400 disabled:opacity-50 px-4 py-3.5 text-sm font-semibold text-white dark:text-slate-950 transition-all shadow-[0_0_20px_rgba(8,145,178,0.25)] dark:shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:-translate-y-0.5 flex items-center justify-center gap-2 focus:outline-none"
+            className="w-full mt-8 rounded-xl bg-cyan-600 dark:bg-cyan-500 hover:bg-cyan-500 dark:hover:bg-cyan-400 disabled:opacity-50 px-4 py-3.5 text-sm font-semibold text-white dark:text-slate-950 transition-all shadow-[0_0_20px_rgba(8,145,178,0.25)] dark:shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:-translate-y-0.5 flex items-center justify-center gap-2 focus:outline-none"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />

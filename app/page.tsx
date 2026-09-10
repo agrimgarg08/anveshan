@@ -37,7 +37,7 @@ export default function LandingPage() {
             transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
             className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
           >
-            <Link href="/dashboard" className="w-full sm:w-auto group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-semibold rounded-full transition-all overflow-hidden">
+            <Link href="/console" className="w-full sm:w-auto group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-semibold rounded-full transition-all overflow-hidden">
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
               <span className="relative flex items-center justify-center gap-2">
                 Start Detection <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />

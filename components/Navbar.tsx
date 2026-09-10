@@ -53,9 +53,9 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 left-0 right-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 z-50 transition-colors">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+    <nav className="sticky top-4 w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] max-w-7xl mx-auto bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-full z-50 transition-colors shadow-lg mt-4 mb-6">
+      <div className="pl-5 pr-3.5 lg:pl-6 lg:pr-3.5">
+        <div className="flex items-center justify-between h-16">
           {/* Brand */}
           <div className="flex items-center gap-8">
             <Link href="/" onClick={handleHomeClick} className="flex items-center">
@@ -80,8 +80,8 @@ export default function Navbar() {
                 Home
               </Link>
               <Link
-                href="/dashboard"
-                className={`transition-all duration-200 py-1 ${pathname === '/dashboard'
+                href="/console"
+                className={`transition-all duration-200 py-1 ${pathname === '/console'
                     ? 'text-cyan-600 dark:text-cyan-400 font-semibold drop-shadow-[0_0_8px_rgba(8,145,178,0.4)] dark:drop-shadow-[0_0_10px_rgba(34,211,238,0.65)]'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.1)] dark:hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.2)]'
                   }`}
@@ -102,7 +102,7 @@ export default function Navbar() {
                         setIsDropdownOpen(!isDropdownOpen);
                         setShowLogoutConfirm(false);
                       }}
-                      className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       aria-label="Settings"
                     >
                       <Settings size={20} />
@@ -209,7 +209,7 @@ export default function Navbar() {
                 ) : (
                   <Link
                     href="/login"
-                    className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all ${pathname === '/login'
+                    className={`flex items-center gap-2 text-sm font-semibold px-5 py-2 rounded-full transition-all ${pathname === '/login'
                         ? 'bg-cyan-500 text-white dark:text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
                         : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-950 shadow-md dark:shadow-[0_0_20px_rgba(255,255,255,0.1)] dark:hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]'
                       }`}
