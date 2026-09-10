@@ -55,6 +55,13 @@ st.set_page_config(page_title="Anveshan", layout="wide")
 st.title("Anveshan — Marine Debris Detection (Side-Scan Sonar)")
 st.caption("SIH 2026 · PS 26057 · Roboflow-hosted detection with simulated navigation metadata")
 
+api_key = setting("ROBOFLOW_API_KEY")
+model_id = setting("ROBOFLOW_MODEL_ID")
+if api_key and model_id:
+    st.sidebar.success(f"Roboflow configuration loaded · {model_id}")
+else:
+    st.sidebar.warning("Roboflow configuration is incomplete")
+
 uploaded = st.file_uploader("Upload a sonar image", type=["png", "jpg", "jpeg"])
 if uploaded is None:
     st.info("Upload a sonar image to begin.")
@@ -73,7 +80,7 @@ with processed_column:
 st.divider()
 st.subheader("Detections")
 try:
-    client = RoboflowClient(api_key=setting("ROBOFLOW_API_KEY"), model_id=setting("ROBOFLOW_MODEL_ID"))
+    client = RoboflowClient(api_key=api_key, model_id=model_id)
 except RoboflowConfigurationError:
     st.warning(
         "Hosted inference is not configured. Set `ROBOFLOW_API_KEY` and "

@@ -99,7 +99,7 @@ if __name__ == "__main__":
     dummy_image = np.random.randint(0, 255, (640, 640), dtype=np.uint8)
     dummy_detections = [
         {"class": "pipe_cylinder", "confidence": 0.82, "bbox": (100, 100, 60, 40)},
-        {"class": "unknown_anomaly", "confidence": 0.45, "bbox": (300, 300, 30, 30)},
+        {"class": "shipwreck", "confidence": 0.45, "bbox": (300, 300, 30, 30)},
     ]
     result = refine_detections(dummy_image, dummy_detections)
     for r in result:

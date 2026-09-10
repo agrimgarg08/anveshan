@@ -64,8 +64,9 @@ environment variables.
 streamlit run dashboard/app.py
 ```
 
-The model ID must be the deployed Roboflow model in `<project>/<version>` form,
-for example `marine-sonar-debris/1`.
+The model ID may be the deployed Roboflow model in
+`<workspace>/<project>/<version>` form, for example
+`dev-manchanda/marine-sonar-debris/1`.
 
 ## Repo layout
 

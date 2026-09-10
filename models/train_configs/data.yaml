@@ -12,6 +12,5 @@ names:
   0: debris_net_or_pot
   1: pipe_cylinder
   2: shipwreck
-  3: unknown_anomaly
 
 # Do not use this file for the current hosted-training workflow.
