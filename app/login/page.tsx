@@ -47,10 +47,6 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950 px-6 py-12 text-slate-900 dark:text-slate-100 font-sans transition-colors">
-      {/* Background glow effects */}
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 dark:opacity-20 mix-blend-soft-light pointer-events-none"></div>
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-500/10 bg-cyan-100 dark:bg-cyan-500/5 blur-[120px]" />
-
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -58,7 +54,7 @@ export default function LoginPage() {
         className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 sm:p-10 shadow-xl dark:shadow-2xl"
       >
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-yatra font-bold text-slate-900 dark:text-white mb-2 tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-slate-900 to-slate-600 dark:from-slate-100 dark:via-white dark:to-slate-300">
+          <h1 className="text-4xl font-yatra font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-wide pt-2 pb-1 drop-shadow-sm">
             अन्वेषण
           </h1>
         </div>
@@ -124,12 +120,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/80 text-center">
-          <p className="text-xs text-slate-500 flex items-center justify-center gap-1.5">
-            <ShieldCheck size={14} className="text-cyan-600 dark:text-cyan-500/70" />
-            Secure Side-Scan Sonar Analysis Pipeline
-          </p>
-        </div>
       </motion.div>
     </main>
   );

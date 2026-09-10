@@ -90,4 +90,4 @@ Local/edge model export is future work and is not claimed for this version.
 
 ## Team
 
-Built by [agrimgarg08](https://github.com/agrimgarg08) and team.
+Built by Team Unstable

@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${plusJakartaSans.variable} ${yatraOne.variable} font-sans bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500/30 transition-colors duration-300`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <AuthProvider>
@@ -40,7 +40,7 @@ export default function RootLayout({
             <Footer />
           </AuthProvider>
         </ThemeProvider>
-        <Toaster position="bottom-right" />
+        <Toaster position="bottom-right" toastOptions={{ className: "font-sans" }} />
       </body>
     </html>
   );

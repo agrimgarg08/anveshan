@@ -37,6 +37,12 @@ export default function Dashboard() {
   }, [authReady, authenticated, router]);
 
   const handleFile = (selectedFile: File) => {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(selectedFile.type)) {
+      toast.error('Invalid file type. Please upload a JPEG or PNG image.');
+      return;
+    }
+    
     setFile(selectedFile);
     setPreviewUrl(URL.createObjectURL(selectedFile));
     setResult(null);
@@ -49,23 +55,52 @@ export default function Dashboard() {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  const dragCounter = useRef(0);
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current += 1;
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setIsDragging(true);
+      }
+    };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
+    const handleWindowDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current -= 1;
+      if (dragCounter.current === 0) {
+        setIsDragging(false);
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      setIsDragging(false);
+      
+      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    };
+
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -217,17 +252,14 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="xl:col-span-4 space-y-6"
           >
-            <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none transition-colors">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm min-h-[400px] flex flex-col shadow-sm dark:shadow-none transition-colors">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
                 <UploadCloud size={20} className="text-cyan-600 dark:text-cyan-400" /> Upload Sonar Data
               </h2>
               
               {/* Drag and drop area */}
               <div 
                 tabIndex={0}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
                 onClick={() => document.getElementById('file-upload')?.click()}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -235,7 +267,7 @@ export default function Dashboard() {
                     document.getElementById('file-upload')?.click();
                   }
                 }}
-                className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900
+                className={`relative flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900
                   ${isDragging ? 'border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/5' : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}
                   ${file ? 'border-solid border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900' : ''}`}
               >
@@ -248,13 +280,13 @@ export default function Dashboard() {
                 />
                 
                 {file ? (
-                  <div className="flex flex-col items-center">
-                    <ImageIcon className="w-10 h-10 text-cyan-600 dark:text-cyan-500 mb-3" />
+                  <div className="flex flex-col items-center w-full max-w-[240px] overflow-hidden">
+                    <ImageIcon className="w-10 h-10 text-cyan-600 dark:text-cyan-500 mb-3 shrink-0" />
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full">{file.name}</p>
                     <p className="text-xs text-slate-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setFile(null); setPreviewUrl(null); setResult(null); }}
-                      className="mt-4 text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                      className="mt-4 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 text-xs font-medium transition-colors duration-300"
                     >
                       Remove file
                     </button>

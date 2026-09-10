@@ -7,6 +7,7 @@ import { useAuth } from './AuthProvider';
 import { LogIn, LogOut, Settings, Sun, Moon, Check, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -48,6 +49,7 @@ export default function Navbar() {
     router.push('/');
     setIsDropdownOpen(false);
     setShowLogoutConfirm(false);
+    toast.success('Successfully logged out');
   };
 
   return (
@@ -57,7 +59,7 @@ export default function Navbar() {
           {/* Brand */}
           <div className="flex items-center gap-8">
             <Link href="/" onClick={handleHomeClick} className="flex items-center group">
-              <span className="font-yatra text-3xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-100 dark:to-slate-400 group-hover:from-cyan-600 group-hover:to-cyan-800 dark:group-hover:from-white dark:group-hover:to-slate-200 transition-all">
+              <span className="font-yatra text-3xl tracking-wide text-slate-800 dark:text-slate-100 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_10px_rgba(8,145,178,0.3)] dark:group-hover:drop-shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300">
                 अन्वेषण
               </span>
             </Link>
