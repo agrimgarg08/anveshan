@@ -1,40 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.env
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Jupyter
-.ipynb_checkpoints/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Data (too large / not meant for git — track via README instead)
-data/raw/*
-data/processed/*
-data/synthetic/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/synthetic/.gitkeep
+# testing
+/coverage
 
-# Model weights (large files — consider Git LFS if you must commit them)
-models/weights/*.pt
-models/weights/*.onnx
-!models/weights/.gitkeep
+# next.js
+/.next/
+/out/
 
-# Ultralytics training runs
-runs/
+# production
+/build
 
-# Reports (sample outputs are fine to commit selectively, ignore bulk runs)
-reports/*.json
-reports/*.csv
-!reports/sample_report.json
-!reports/sample_report.csv
-
-# OS / editor
+# misc
 .DS_Store
-.vscode/
-*.swp
+*.pem
 
-# Streamlit
-.streamlit/
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
