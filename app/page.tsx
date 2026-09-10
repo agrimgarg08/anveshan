@@ -151,10 +151,20 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Anveshan — Marine Debris Detection</h1>
-        <p className="text-gray-400">SIH 2026 · PS 26057 · Next.js Refactor</p>
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-8 pt-24">
+      {/* Pill-like navbar with glass blur */}
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800/60 backdrop-blur-md border border-gray-700/50 px-6 py-3 rounded-full z-50 flex items-center justify-between shadow-lg min-w-[300px]">
+        <div className="flex items-center space-x-2">
+          <span className="font-yatra text-2xl tracking-wide text-blue-400">अन्वेषण</span>
+        </div>
+        <div className="text-sm font-medium text-gray-300">
+          SIH 2026
+        </div>
+      </nav>
+
+      <header className="mb-8 text-center mt-4">
+        <h1 className="text-5xl font-yatra font-bold mb-2">अन्वेषण</h1>
+        <p className="text-gray-400">Marine Debris Detection System (PS 26057)</p>
       </header>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

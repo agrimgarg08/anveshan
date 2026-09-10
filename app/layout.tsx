@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, Yatra_One } from "next/font/google";
 import "./globals.css";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans",
+});
+
+const yatraOne = Yatra_One({
+  weight: "400",
+  subsets: ["latin", "devanagari"],
+  variable: "--font-yatra-one",
+});
 
 export const metadata: Metadata = {
   title: "Anveshan",
@@ -13,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className={`${plusJakartaSans.variable} ${yatraOne.variable} font-sans`}>
         {children}
       </body>
     </html>
