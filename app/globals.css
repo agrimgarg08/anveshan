@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: var(--font-plus-jakarta-sans), sans-serif;
+  --font-yatra: var(--font-yatra-one), serif;
+}
+
+.font-sans {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+}
+
+.font-yatra {
+  font-family: var(--font-yatra-one), serif;
+  font-weight: 400;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

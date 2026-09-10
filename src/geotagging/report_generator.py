@@ -2,29 +2,11 @@
 report_generator.py
 
 Maps pixel-space detections to real-world lat/lon using simulated (or real,
-if you have it) tow-path metadata, and outputs structured JSON/CSV reports.
-
-If you don't have real navigation data tied to your sonar images, use
-`generate_simulated_metadata()` to create a plausible tow path for demo
-purposes — and say so explicitly in your slides. Judges respect an honest
-"this is simulated for the prototype" far more than an unexplained number.
-
-Usage:
-    from report_generator import generate_simulated_metadata, build_report
-
-    meta = generate_simulated_metadata(num_pings=50, start_lat=13.0827, start_lon=80.2707)
-    report = build_report(detections, meta, image_width_px=640, swath_width_m=50)
-    report.to_json("reports/sample_report.json")
-    report.to_csv("reports/sample_report.csv")
+if you have it) tow-path metadata, and outputs structured reports.
 """
 
-import json
 import math
-from io import StringIO
-from dataclasses import dataclass, field, asdict
-
-import pandas as pd
-
+from dataclasses import dataclass, asdict
 
 @dataclass
 class ReportEntry:
@@ -38,45 +20,14 @@ class ReportEntry:
     longitude: float
     timestamp: str
 
-
-class Report:
-    def __init__(self, entries: list):
-        self.entries = entries
-
-    def to_json(self, path: str):
-        with open(path, "w") as f:
-            f.write(self.to_json_text())
-        print(f"Wrote {len(self.entries)} detections to {path}")
-
-    def to_csv(self, path: str):
-        with open(path, "w", newline="") as f:
-            f.write(self.to_csv_text())
-        print(f"Wrote {len(self.entries)} detections to {path}")
-
-    def to_json_text(self) -> str:
-        """Return report JSON for dashboard downloads without writing a file."""
-        return json.dumps([asdict(e) for e in self.entries], indent=2)
-
-    def to_csv_text(self) -> str:
-        """Return report CSV for dashboard downloads without writing a file."""
-        buffer = StringIO()
-        pd.DataFrame([asdict(e) for e in self.entries]).to_csv(buffer, index=False)
-        return buffer.getvalue()
-
-
 def generate_simulated_metadata(
     num_pings: int = 50,
     start_lat: float = 13.0827,
     start_lon: float = 80.2707,
     heading_deg: float = 45.0,
     ping_spacing_m: float = 2.0,
-) -> pd.DataFrame:
-    """Generate a plausible straight-line tow path for demo purposes.
-
-    Moves in a fixed heading from a start point, one row per ping.
-    NOTE: this is simulated data — say so explicitly in your demo/slides
-    unless you've substituted real navigation metadata from your dataset.
-    """
+) -> list[dict]:
+    """Generate a plausible straight-line tow path for demo purposes."""
     earth_radius_m = 6371000
     rows = []
     for i in range(num_pings):
@@ -92,8 +43,7 @@ def generate_simulated_metadata(
             "heading": heading_deg,
             "timestamp": f"2026-09-05T10:{(22 + i) % 60:02d}:00Z",
         })
-    return pd.DataFrame(rows)
-
+    return rows
 
 def pixel_to_latlon(
     bbox_center_x: float,
@@ -101,14 +51,9 @@ def pixel_to_latlon(
     image_width_px: int,
     image_height_px: int,
     swath_width_m: float,
-    ping_meta_row: pd.Series,
+    ping_meta_row: dict,
 ) -> tuple:
-    """Convert a detection's pixel center to an approximate lat/lon.
-
-    Simplified model: column position -> across-track offset from the tow
-    path (using swath width), applied perpendicular to heading. Good enough
-    for a hackathon demo; a real system would use per-ping slant-range data.
-    """
+    """Convert a detection's pixel center to an approximate lat/lon."""
     across_track_m = ((bbox_center_x / image_width_px) - 0.5) * swath_width_m
 
     heading_rad = math.radians(ping_meta_row["heading"])
@@ -124,26 +69,17 @@ def pixel_to_latlon(
     lon = ping_meta_row["longitude"] + math.degrees(d_lon)
     return lat, lon
 
-
 def build_report(
     detections: list,
-    ping_metadata: pd.DataFrame,
+    ping_metadata: list[dict],
     image_width_px: int = 640,
     image_height_px: int = 640,
     swath_width_m: float = 50.0,
-) -> Report:
-    """Build a full Report from filtered detections + tow-path metadata.
-
-    detections: output of confidence_filter.refine_detections(), i.e. dicts with
-        class, final_confidence, flagged_for_review, bbox (x, y, w, h)
-    ping_metadata: DataFrame from generate_simulated_metadata() (or real data
-        in the same shape: ping_number, latitude, longitude, heading, timestamp)
-    """
+) -> list[ReportEntry]:
+    """Build a list of ReportEntry from filtered detections + tow-path metadata."""
     entries = []
     for idx, det in enumerate(detections):
-        # naive: assign each detection to a ping row round-robin for the demo;
-        # replace with a real row-index -> ping mapping once you have real logs
-        ping_row = ping_metadata.iloc[idx % len(ping_metadata)]
+        ping_row = ping_metadata[idx % len(ping_metadata)]
 
         x, y, w, h = det["bbox"]
         cx, cy = x + w / 2, y + h / 2
@@ -161,16 +97,14 @@ def build_report(
             timestamp=str(ping_row["timestamp"]),
         ))
 
-    return Report(entries)
-
+    return entries
 
 if __name__ == "__main__":
-    # Smoke test
     meta = generate_simulated_metadata(num_pings=10)
     dummy_detections = [
         {"class": "pipe_cylinder", "final_confidence": 82.4, "flagged_for_review": False, "bbox": (100, 100, 60, 40)},
         {"class": "unknown_anomaly", "final_confidence": 35.1, "flagged_for_review": True, "bbox": (300, 300, 30, 30)},
     ]
     report = build_report(dummy_detections, meta)
-    for e in report.entries:
+    for e in report:
         print(e)

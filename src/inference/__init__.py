@@ -1,5 +1,5 @@
 """Hosted model inference adapters."""
 
-from .roboflow_client import RoboflowClient, RoboflowConfigurationError, RoboflowInferenceError
+from .roboflow_client import predict
 
-__all__ = ["RoboflowClient", "RoboflowConfigurationError", "RoboflowInferenceError"]
+__all__ = ["predict"]

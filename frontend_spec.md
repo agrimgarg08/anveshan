@@ -104,4 +104,4 @@ Comes from `report_generator.build_report()` → `Report.entries`, this is what 
 - Real navigation-metadata CSV upload (may be added later; simulated-only for now)
 - User accounts, auth, persistence across sessions
 - Editing/correcting detections in the UI
-- Any deployment beyond local (or optionally Streamlit Community Cloud) — no mobile app, no native packaging
+- Any deployment beyond local (or optionally Vercel) — no mobile app, no native packaging
