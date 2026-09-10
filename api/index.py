@@ -7,7 +7,7 @@ import os
 import io
 import base64
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ExifTags
 from dataclasses import asdict
 import requests
 
@@ -29,11 +29,64 @@ def numpy_to_base64(img_arr: np.ndarray) -> str:
     _, buffer = cv2.imencode('.png', img_arr)
     return base64.b64encode(buffer).decode('utf-8')
 
+def _convert_to_degrees(value):
+    def to_float(x):
+        if hasattr(x, 'numerator') and hasattr(x, 'denominator'):
+            return float(x.numerator) / float(x.denominator)
+        if isinstance(x, (tuple, list)) and len(x) == 2:
+            return float(x[0]) / float(x[1])
+        return float(x)
+        
+    try:
+        d = to_float(value[0])
+        m = to_float(value[1])
+        s = to_float(value[2])
+        return d + (m / 60.0) + (s / 3600.0)
+    except Exception:
+        return 0.0
+
+def get_exif_location(image: Image.Image):
+    try:
+        exif = image.getexif()
+        if not exif:
+            return None, None
+            
+        # 34853 is the tag for GPSInfo
+        gps_info = exif.get_ifd(34853)
+        if not gps_info:
+            return None, None
+            
+        # 1: GPSLatitudeRef, 2: GPSLatitude, 3: GPSLongitudeRef, 4: GPSLongitude
+        gps_latitude = gps_info.get(2)
+        gps_latitude_ref = gps_info.get(1)
+        gps_longitude = gps_info.get(4)
+        gps_longitude_ref = gps_info.get(3)
+        
+        if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+            lat = _convert_to_degrees(gps_latitude)
+            if gps_latitude_ref != "N":                     
+                lat = 0 - lat
+
+            lon = _convert_to_degrees(gps_longitude)
+            if gps_longitude_ref != "E":
+                lon = 0 - lon
+
+            return lat, lon
+    except Exception as e:
+        print(f"Error parsing EXIF: {e}")
+    return None, None
+
 @app.post("/api/process")
 async def process_image(file: UploadFile = File(...)):
     try:
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("L")
+        image = Image.open(io.BytesIO(contents))
+        
+        # Attempt to extract EXIF data before converting to Grayscale
+        exif_lat, exif_lon = get_exif_location(image)
+        is_real_location = (exif_lat is not None and exif_lon is not None)
+        
+        image = image.convert("L")
         raw_image = np.array(image)
         
         # 1. Preprocess
@@ -87,7 +140,11 @@ async def process_image(file: UploadFile = File(...)):
             
         # 3. Geotagging
         num_pings = max(10, len(flat_detections))
-        ping_metadata = generate_simulated_metadata(num_pings=num_pings)
+        
+        if is_real_location:
+            ping_metadata = generate_simulated_metadata(num_pings=num_pings, start_lat=exif_lat, start_lon=exif_lon)
+        else:
+            ping_metadata = generate_simulated_metadata(num_pings=num_pings)
         
         report_detections = []
         for d in flat_detections:
@@ -119,6 +176,7 @@ async def process_image(file: UploadFile = File(...)):
             "report": [asdict(entry) for entry in report],
             "demo_mode": demo_mode,
             "demo_scenario": demo_scenario,
+            "is_real_location": is_real_location,
         })
         
     except HTTPException:

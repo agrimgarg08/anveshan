@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
+    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${plusJakartaSans.variable} ${yatraOne.variable} font-sans bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500/30 transition-colors duration-300 relative`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <div className="fixed inset-0 -z-10 pointer-events-none">

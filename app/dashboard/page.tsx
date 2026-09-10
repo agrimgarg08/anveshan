@@ -22,19 +22,18 @@ export default function Dashboard() {
   const router = useRouter();
   const { authenticated, authReady } = useAuth();
   const { resolvedTheme } = useTheme();
-  
+
   const mapTheme = resolvedTheme === 'dark' ? 'dark_all' : 'light_all';
   const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
-  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${mapTheme}/{z}/{x}/{y}{r}.png${
-    cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
-  }`;
-  
+  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${mapTheme}/{z}/{x}/{y}{r}.png${cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
+    }`;
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const [result, setResult] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -50,7 +49,7 @@ export default function Dashboard() {
       toast.error('Invalid file type. Please upload a JPEG or PNG image.');
       return;
     }
-    
+
     setFile(selectedFile);
     setPreviewUrl(URL.createObjectURL(selectedFile));
     setResult(null);
@@ -63,63 +62,18 @@ export default function Dashboard() {
     }
   };
 
-  const dragCounter = useRef(0);
 
-  useEffect(() => {
-    const handleWindowDragEnter = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter.current += 1;
-      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
-        setIsDragging(true);
-      }
-    };
-
-    const handleWindowDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter.current -= 1;
-      if (dragCounter.current === 0) {
-        setIsDragging(false);
-      }
-    };
-
-    const handleWindowDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-    };
-
-    const handleWindowDrop = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounter.current = 0;
-      setIsDragging(false);
-      
-      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-        handleFile(e.dataTransfer.files[0]);
-      }
-    };
-
-    window.addEventListener('dragenter', handleWindowDragEnter);
-    window.addEventListener('dragleave', handleWindowDragLeave);
-    window.addEventListener('dragover', handleWindowDragOver);
-    window.addEventListener('drop', handleWindowDrop);
-
-    return () => {
-      window.removeEventListener('dragenter', handleWindowDragEnter);
-      window.removeEventListener('dragleave', handleWindowDragLeave);
-      window.removeEventListener('dragover', handleWindowDragOver);
-      window.removeEventListener('drop', handleWindowDrop);
-    };
-  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
-    
+
     setLoading(true);
     setResult(null);
     setApiError(null);
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const promise = fetch('/api/process', {
       method: 'POST',
       body: formData,
@@ -143,7 +97,7 @@ export default function Dashboard() {
       }
     });
 
-    promise.catch(() => {}).finally(() => setLoading(false));
+    promise.catch(() => { }).finally(() => setLoading(false));
   };
 
   // Draw bounding boxes on canvas
@@ -152,37 +106,37 @@ export default function Dashboard() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      
+
       const img = new Image();
       img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
-        
+
         if (result.detections) {
           result.detections.forEach((d: any) => {
             const [x, y, w, h] = d.bbox;
             const flagged = d.flagged_for_review;
-            
+
             // Neon-like colors
             ctx.strokeStyle = flagged ? '#f97316' : '#10b981'; // orange-500 : emerald-500
             ctx.lineWidth = 3;
-            
+
             if (flagged) {
-               ctx.setLineDash([8, 6]);
+              ctx.setLineDash([8, 6]);
             } else {
-               ctx.setLineDash([]);
+              ctx.setLineDash([]);
             }
-            
+
             ctx.strokeRect(x, y, w, h);
-            
+
             ctx.setLineDash([]);
             ctx.fillStyle = ctx.strokeStyle;
             ctx.font = 'bold 13px Inter, sans-serif';
             const label = `${d.class} ${d.final_confidence.toFixed(0)}%`;
             const textMetrics = ctx.measureText(label);
             ctx.fillRect(x, Math.max(0, y - 24), textMetrics.width + 12, 24);
-            
+
             ctx.fillStyle = '#ffffff';
             ctx.fillText(label, x + 6, Math.max(16, y - 8));
           });
@@ -205,7 +159,7 @@ export default function Dashboard() {
   const downloadCsv = () => {
     if (!result || !result.report || result.report.length === 0) return;
     const headers = Object.keys(result.report[0]).join(',');
-    const rows = result.report.map((r: any) => 
+    const rows = result.report.map((r: any) =>
       Object.values(r).map(v => {
         if (typeof v === 'object' && v !== null) {
           return `"${JSON.stringify(v).replace(/"/g, '""')}"`;
@@ -249,12 +203,45 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors">
+    <div 
+      className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        setIsDragging(true);
+      }}
+    >
+      {/* Invisible full-screen drag overlay to handle drops anywhere and prevent child flicker */}
+      {isDragging && (
+        <div 
+          className="fixed inset-0 z-[100]"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+              handleFile(e.dataTransfer.files[0]);
+            }
+          }}
+        />
+      )}
+
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 py-8">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          
+
           {/* Left Column: Upload & Actions */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -264,9 +251,9 @@ export default function Dashboard() {
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
                 <UploadCloud size={20} className="text-cyan-600 dark:text-cyan-400" /> Upload Sonar Data
               </h2>
-              
+
               {/* Drag and drop area */}
-              <div 
+              <div
                 tabIndex={0}
                 onClick={() => document.getElementById('file-upload')?.click()}
                 onKeyDown={(e) => {
@@ -279,20 +266,20 @@ export default function Dashboard() {
                   ${isDragging ? 'border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/5' : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}
                   ${file ? 'border-solid border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900' : ''}`}
               >
-                <input 
+                <input
                   id="file-upload"
-                  type="file" 
-                  accept="image/png, image/jpeg" 
+                  type="file"
+                  accept="image/png, image/jpeg"
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                
+
                 {file ? (
                   <div className="flex flex-col items-center w-full max-w-[240px] overflow-hidden">
                     <ImageIcon className="w-10 h-10 text-cyan-600 dark:text-cyan-500 mb-3 shrink-0" />
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full">{file.name}</p>
                     <p className="text-xs text-slate-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); setFile(null); setPreviewUrl(null); setResult(null); }}
                       className="mt-4 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 text-xs font-medium transition-colors duration-300"
                     >
@@ -311,7 +298,7 @@ export default function Dashboard() {
               </div>
 
               {previewUrl && (
-                <button 
+                <button
                   onClick={handleUpload}
                   disabled={loading}
                   className="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-semibold py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
@@ -325,10 +312,10 @@ export default function Dashboard() {
               )}
 
             </div>
-            
+
             {/* Reports Card */}
             {result && result.report && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none transition-colors"
@@ -337,14 +324,14 @@ export default function Dashboard() {
                   <Download size={20} className="text-indigo-600 dark:text-indigo-400" /> Export Reports
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={downloadJson} 
+                  <button
+                    onClick={downloadJson}
                     className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 transition"
                   >
                     <FileJson size={18} className="text-slate-500 dark:text-slate-400" /> JSON
                   </button>
-                  <button 
-                    onClick={downloadCsv} 
+                  <button
+                    onClick={downloadCsv}
                     className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 transition"
                   >
                     <FileSpreadsheet size={18} className="text-slate-500 dark:text-slate-400" /> CSV
@@ -353,15 +340,15 @@ export default function Dashboard() {
               </motion.div>
             )}
           </motion.div>
-          
+
           {/* Right Column: Visualization */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="xl:col-span-8 space-y-6"
           >
-            
+
             {/* Image Preview & Results */}
             <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm min-h-[400px] flex flex-col shadow-sm dark:shadow-none transition-colors">
               <div className="flex items-center justify-between mb-6">
@@ -425,10 +412,10 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            
+
             {/* Map and Detection List (Only if result exists) */}
             {result && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-1 md:grid-cols-2 gap-6"
@@ -440,16 +427,23 @@ export default function Dashboard() {
                       <MapIcon size={20} className="text-emerald-600 dark:text-emerald-400" /> Geolocation
                     </h2>
                   </div>
-                  <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-200/80 text-xs px-3 py-2 rounded-lg mb-4 flex gap-2 items-start transition-colors">
-                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                    <p>Coordinates are simulated for this prototype. Real deployment would parse NMEA/navigation metadata from the sonar log.</p>
-                  </div>
-                  
+                  {result.is_real_location ? (
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-200/80 text-xs px-3 py-2 rounded-lg mb-4 flex gap-2 items-start transition-colors">
+                      <CheckCircle size={14} className="shrink-0 mt-0.5" />
+                      <p>Real GPS Coordinates extracted from image EXIF metadata.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-200/80 text-xs px-3 py-2 rounded-lg mb-4 flex gap-2 items-start transition-colors">
+                      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                      <p>No EXIF GPS data found. Coordinates are simulated for this prototype.</p>
+                    </div>
+                  )}
+
                   <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 min-h-[300px] z-0 relative transition-colors">
                     {result.report && result.report.length > 0 ? (
-                      <MapContainer 
-                        center={[result.report[0].latitude, result.report[0].longitude]} 
-                        zoom={8} 
+                      <MapContainer
+                        center={[result.report[0].latitude, result.report[0].longitude]}
+                        zoom={8}
                         style={{ height: '100%', width: '100%' }}
                         className="z-0"
                       >
@@ -459,23 +453,23 @@ export default function Dashboard() {
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         />
                         {result.report.map((entry: any) => {
-                           const iconHtml = entry.flagged_for_review 
-                             ? '<div style="background-color:#f97316; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>'
-                             : '<div style="background-color:#10b981; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>';
-                           const customIcon = leafletLib ? leafletLib.divIcon({
-                             html: iconHtml,
-                             className: '',
-                             iconSize: [16, 16],
-                             iconAnchor: [8, 8],
-                           }) : undefined;
-                           return (
-                             <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]} icon={customIcon}>
-                               <Popup className="text-slate-900 font-sans">
-                                 <div className="font-semibold capitalize">{entry.image_class.replace(/_/g, ' ')}</div>
-                                 <div className="text-sm text-slate-600">Confidence: {entry.confidence.toFixed(1)}%</div>
-                               </Popup>
-                             </Marker>
-                           );
+                          const iconHtml = entry.flagged_for_review
+                            ? '<div style="background-color:#f97316; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>'
+                            : '<div style="background-color:#10b981; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>';
+                          const customIcon = leafletLib ? leafletLib.divIcon({
+                            html: iconHtml,
+                            className: '',
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8],
+                          }) : undefined;
+                          return (
+                            <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]} icon={customIcon}>
+                              <Popup className="text-slate-900 font-sans">
+                                <div className="font-semibold capitalize">{entry.image_class.replace(/_/g, ' ')}</div>
+                                <div className="text-sm text-slate-600">Confidence: {entry.confidence.toFixed(1)}%</div>
+                              </Popup>
+                            </Marker>
+                          );
                         })}
                       </MapContainer>
                     ) : (
@@ -495,13 +489,12 @@ export default function Dashboard() {
                     {result.report && result.report.length > 0 ? (
                       <div className="space-y-3">
                         {result.report.map((entry: any) => (
-                          <div 
-                            key={entry.detection_id} 
-                            className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
-                              entry.flagged_for_review 
-                                ? 'bg-orange-50 dark:bg-orange-500/5 border-orange-200 dark:border-orange-500/20' 
-                                : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20'
-                            }`}
+                          <div
+                            key={entry.detection_id}
+                            className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${entry.flagged_for_review
+                              ? 'bg-orange-50 dark:bg-orange-500/5 border-orange-200 dark:border-orange-500/20'
+                              : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20'
+                              }`}
                           >
                             <div>
                               <p className="font-semibold text-slate-900 dark:text-slate-200 capitalize">{entry.image_class.replace(/_/g, ' ')}</p>
@@ -533,7 +526,7 @@ export default function Dashboard() {
                 </div>
               </motion.div>
             )}
-            
+
           </motion.div>
         </div>
       </main>
