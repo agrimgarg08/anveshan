@@ -20,6 +20,7 @@ Usage:
 
 import json
 import math
+from io import StringIO
 from dataclasses import dataclass, field, asdict
 
 import pandas as pd
@@ -44,13 +45,23 @@ class Report:
 
     def to_json(self, path: str):
         with open(path, "w") as f:
-            json.dump([asdict(e) for e in self.entries], f, indent=2)
+            f.write(self.to_json_text())
         print(f"Wrote {len(self.entries)} detections to {path}")
 
     def to_csv(self, path: str):
-        df = pd.DataFrame([asdict(e) for e in self.entries])
-        df.to_csv(path, index=False)
+        with open(path, "w", newline="") as f:
+            f.write(self.to_csv_text())
         print(f"Wrote {len(self.entries)} detections to {path}")
+
+    def to_json_text(self) -> str:
+        """Return report JSON for dashboard downloads without writing a file."""
+        return json.dumps([asdict(e) for e in self.entries], indent=2)
+
+    def to_csv_text(self) -> str:
+        """Return report CSV for dashboard downloads without writing a file."""
+        buffer = StringIO()
+        pd.DataFrame([asdict(e) for e in self.entries]).to_csv(buffer, index=False)
+        return buffer.getvalue()
 
 
 def generate_simulated_metadata(

@@ -6,9 +6,9 @@ This file tracks the active sprint state. The complete dependency-aware checklis
 
 - **Sprint:** 7-day Marine Debris SSS Detection MVP
 - **Status:** Not started
-- **Current phase:** Day 1 — Scope, repository, and environment
+- **Current phase:** Day 1 — Scope, repository, and hosted environment
 - **Active task:** D1-01 — Review real SSS imagery
-- **Overall completion:** 0 / 43 tasks checked
+- **Overall completion:** 3 / 43 tasks checked
 - **Last updated:** 2026-09-06
 
 ## Next action
@@ -31,11 +31,13 @@ This file tracks the active sprint state. The complete dependency-aware checklis
 
 ## Recently completed
 
-- None.
+- **D1-03 — Repository scaffold verified (2026-09-06).** Required directories exist; `.gitkeep` files preserve empty data/model/report/notebook directories in version control, and `.gitignore` excludes generated datasets, weights, and training runs.
+- **D1-06 — Roboflow project created (2026-09-10).** Workspace/project: `dev-manchanda/marine-sonar-debris`. Dataset merging and class mapping are in progress.
+- **D1-05 — Hosted-training path selected (2026-09-10).** Roboflow will train and host inference; local GPU and ONNX deployment are out of scope for this prototype.
 
 ## Blockers and decisions
 
-- No blockers recorded.
+- Training and inference decision: use Roboflow hosted object detection because no local GPU is currently available. The Streamlit dashboard calls the deployed Hosted API; local/edge ONNX deployment is explicitly future work.
 - Initial class list: `debris_net_or_pot`, `pipe_cylinder`, `shipwreck`, `unknown_anomaly`.
 - Dashboard default: Streamlit with direct pipeline calls; FastAPI remains optional.
 - Navigation metadata is simulated unless real image-linked navigation data becomes available.

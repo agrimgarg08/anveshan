@@ -20,7 +20,7 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D1-01  
   **Done when:** The selected class list and MVP flow are documented in `reports/domain_notes.md` or an equivalent project note.
 
-- [ ] **D1-03 — Create and verify the repository scaffold.** Ensure these directories exist: `data/raw`, `data/processed`, `data/synthetic`, `models/weights`, `src/preprocessing`, `src/confidence_filter`, `src/geotagging`, `src/api`, `dashboard`, `reports`, and `notebooks`.  
+- [x] **D1-03 — Create and verify the repository scaffold.** Ensure these directories exist: `data/raw`, `data/processed`, `data/synthetic`, `models/weights`, `src/preprocessing`, `src/confidence_filter`, `src/geotagging`, `src/api`, `dashboard`, `reports`, and `notebooks`.
   **Depends on:** None  
   **Done when:** All directories exist, are represented in version control where appropriate, and generated datasets/weights are excluded by `.gitignore`.
 
@@ -28,11 +28,11 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D1-03  
   **Done when:** The environment activates successfully and all required imports complete without errors.
 
-- [ ] **D1-05 — Verify RTX 3060/GPU access.** Run the CUDA availability check and record the result.  
+- [x] **D1-05 — Record hosted-training decision.** Record that Roboflow provides training and inference because no local GPU is currently available.
   **Depends on:** D1-04  
-  **Done when:** `torch.cuda.is_available()` returns `True`, or a documented CPU fallback decision is made.
+  **Done when:** Project documentation identifies Roboflow Hosted API as the prototype inference path and does not claim local GPU/edge deployment.
 
-- [ ] **D1-06 — Create Roboflow access.** Create/sign into the Roboflow account and create the project that will contain the merged SSS dataset.  
+- [x] **D1-06 — Create Roboflow access.** Create/sign into the Roboflow account and create the project that will contain the merged SSS dataset.
   **Depends on:** D1-02  
   **Done when:** The project exists, its name and workspace are recorded, and the intended class list is configured.
 
@@ -62,15 +62,15 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D2-04, D2-05  
   **Done when:** The split and augmentation settings are recorded and no source leakage is visible across splits.
 
-- [ ] **D2-07 — Export the YOLOv8 dataset.** Export the prepared project in YOLOv8 format.  
+- [ ] **D2-07 — Generate a Roboflow dataset version.** Create a version containing the selected augmentations and 70/20/10 split for hosted training.
   **Depends on:** D2-06  
-  **Done when:** An export contains `images/`, `labels/`, and `data.yaml`; class IDs/names and train/val/test paths are valid.
+  **Done when:** The Roboflow version records valid class mappings, augmentation settings, and train/validation/test counts.
 
 - [ ] **D2-08 — Validate dataset integrity.** Check image/label pairing, bounding-box ranges, class IDs, empty hard-negative labels, and representative samples.  
   **Depends on:** D2-07  
   **Done when:** At least a few hundred usable images are available after augmentation, and a validation note records zero blocking format errors.
 
-## Day 3 — Preprocessing and initial training
+## Day 3 — Preprocessing and hosted-training baseline
 
 - [ ] **D3-01 — Implement `clean(image)`.** Create `src/preprocessing/clean_sonar.py` with median blur or Lee filtering, CLAHE contrast enhancement, 640×640 normalization, and nadir-gap detection/masking.  
   **Depends on:** D2-08  
@@ -84,19 +84,19 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D3-02  
   **Done when:** The scope decision appears in project documentation/presentation notes.
 
-- [ ] **D3-04 — Run the initial YOLOv8 training sanity check.** Train `yolov8n.pt` for 50 epochs at `imgsz=640` using the exported `data.yaml`, batch size 16 where GPU memory permits.  
+- [ ] **D3-04 — Run the Roboflow hosted-training sanity check.** Start object-detection training from the generated Roboflow dataset version.
   **Depends on:** D1-05, D2-08  
-  **Done when:** A run completes, weights/logs are saved, loss trends are available, and at least one real validation image produces a plausible detection.
+  **Done when:** A Roboflow run completes, its model/version and learning metrics are recorded, and at least one validation image produces a plausible detection.
 
-- [ ] **D3-05 — Record the training baseline.** Record the command, model, dataset version, hardware, epoch count, and initial metrics.  
+- [ ] **D3-05 — Record the training baseline.** Record the Roboflow project/version, model type, hosted-training configuration, and initial metrics.
   **Depends on:** D3-04  
   **Done when:** A baseline note exists under `reports/` and identifies the candidate weights for Day 4.
 
 ## Day 4 — Final training, evaluation, and confidence filtering
 
-- [ ] **D4-01 — Run the extended training.** Train the selected model for up to 100 epochs after confirming the sanity check is learning. Try `yolov8s.pt` only if time and GPU memory permit.  
+- [ ] **D4-01 — Run the selected hosted-training iteration.** Retrain from Roboflow after confirming the initial run is learning or after data improvements.
   **Depends on:** D3-05  
-  **Done when:** The best checkpoint is saved as `models/weights/best.pt` or its exact location is documented.
+  **Done when:** The selected Roboflow model version is deployed and its project/version identifier is documented.
 
 - [ ] **D4-02 — Evaluate on held-out data.** Measure mAP50, precision, and recall overall and per class; inspect prediction images for rock/shadow false positives and missed debris.  
   **Depends on:** D4-01  
@@ -106,9 +106,9 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D4-02  
   **Done when:** Either a retraining iteration is completed with comparison metrics, or the decision not to retrain is documented with evidence.
 
-- [ ] **D4-04 — Export an edge-deployment model.** Export the selected checkpoint to ONNX.  
+- [ ] **D4-04 — Configure hosted deployment.** Deploy the selected Roboflow model and record its `<project>/<version>` identifier.
   **Depends on:** D4-02  
-  **Done when:** `best.onnx` is generated, loads successfully, and its location is documented.
+  **Done when:** The hosted endpoint returns a valid prediction using protected credentials.
 
 - [ ] **D4-05 — Implement the confidence filter.** Create `src/confidence_filter/confidence_filter.py` with YOLO confidence, shape regularity using contours/aspect ratio/edge straightness, and the formula `0.7*yolo_conf + 0.3*shape_score`.  
   **Depends on:** D4-02  
@@ -184,7 +184,7 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D7-03, D7-04  
   **Done when:** The live demo can be run end-to-end and the backup recording is playable.
 
-- [ ] **D7-06 — Prepare Q&A answers.** Prepare concise answers about speckle handling, false-positive rate, YOLO choice, data provenance, scarcity, synthetic augmentation, confidence fusion, and ONNX deployment.  
+- [ ] **D7-06 — Prepare Q&A answers.** Prepare concise answers about speckle handling, false-positive rate, hosted Roboflow deployment, data provenance, scarcity, synthetic augmentation, and confidence fusion.
   **Depends on:** D3-03, D4-02, D4-04, D7-04  
   **Done when:** A Q&A note contains evidence-based answers and cites the relevant dataset/research sources.
 

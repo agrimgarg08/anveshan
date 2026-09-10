@@ -18,7 +18,7 @@ Raw sonar tile
     (despeckle, contrast, nadir-gap mask)
     │
     ▼
-[2] Detection             YOLOv8 (Ultralytics), models/weights/best.pt
+[2] Detection             Roboflow Hosted API, deployed model version
     │
     ▼
 [3] Confidence filtering  src/confidence_filter/confidence_filter.py
@@ -34,11 +34,11 @@ Raw sonar tile
 
 ## Stack
 
-- **Model**: YOLOv8n/s (Ultralytics), fine-tuned on merged SSS datasets
-- **Data prep**: Roboflow (merge, augment, YOLO-format export)
+- **Model**: Roboflow-hosted object detector trained on merged SSS datasets
+- **Data prep/training**: Roboflow (merge, augment, split, train, deploy)
 - **Preprocessing/backend**: Python, OpenCV
 - **Dashboard**: Streamlit + folium (map view)
-- **Hardware**: trained locally on an RTX 3060
+- **Hardware**: cloud-hosted training and inference; no local GPU required
 
 ## Datasets used
 
@@ -55,10 +55,17 @@ conda activate anveshan
 pip install -r requirements.txt
 ```
 
-Confirm GPU is visible:
+Create `.streamlit/secrets.toml` from `dashboard/secrets.toml.example`, then
+set the deployed Roboflow model ID and your private API key. Do not commit this
+file. Alternatively, set `ROBOFLOW_API_KEY` and `ROBOFLOW_MODEL_ID` as
+environment variables.
+
 ```bash
-python -c "import torch; print(torch.cuda.is_available())"
+streamlit run dashboard/app.py
 ```
+
+The model ID must be the deployed Roboflow model in `<project>/<version>` form,
+for example `marine-sonar-debris/1`.
 
 ## Repo layout
 
@@ -69,7 +76,7 @@ src/
   preprocessing/     noise reduction, contrast, nadir-gap masking
   confidence_filter/ shape-regularity + shadow-consistency scoring
   geotagging/         pixel -> lat/lon mapping, report generation
-  api/                FastAPI backend (optional, if not calling pipeline directly from Streamlit)
+  inference/          Roboflow Hosted API adapter
 dashboard/       Streamlit app
 reports/         sample JSON/CSV outputs
 notebooks/       exploration / training notebooks
@@ -78,6 +85,13 @@ notebooks/       exploration / training notebooks
 ## Status
 
 🚧 In progress — SIH 2026 build, 1-week sprint.
+
+## Deployment scope
+
+This prototype trains and runs object detection through Roboflow's hosted
+service because a local GPU is not currently available. The dashboard performs
+preprocessing, confidence filtering, geotagging, and report generation locally.
+Local/edge model export is future work and is not claimed for this version.
 
 ## Team
 

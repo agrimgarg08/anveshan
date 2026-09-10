@@ -1,127 +1,117 @@
-"""
-app.py — Anveshan dashboard (Streamlit)
+"""Anveshan Streamlit dashboard using Roboflow Hosted API inference.
 
-Full pipeline: upload -> preprocess -> detect (YOLO) -> confidence filter
--> geotag -> display + download.
-
-Run from repo root:
+Run from the repository root:
     streamlit run dashboard/app.py
 
-NOTE: expects a trained model at models/weights/best.pt. Until you have
-one, this will still run in "preprocessing preview" mode so you can test
-the UI shell before training finishes.
+Set `ROBOFLOW_API_KEY` and `ROBOFLOW_MODEL_ID` (for example,
+`marine-sonar-debris/1`) as environment variables or Streamlit secrets.
 """
 
-import sys
+from __future__ import annotations
+
 import os
+import sys
+import time
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-import streamlit as st
-import numpy as np
 import cv2
-from PIL import Image
 import folium
+import numpy as np
+import streamlit as st
+from PIL import Image
 from streamlit_folium import st_folium
 
-from preprocessing.clean_sonar import clean
 from confidence_filter.confidence_filter import refine_detections
-from geotagging.report_generator import generate_simulated_metadata, build_report
+from geotagging.report_generator import build_report, generate_simulated_metadata
+from inference.roboflow_client import RoboflowClient, RoboflowConfigurationError, RoboflowInferenceError
+from preprocessing.clean_sonar import clean
 
-MODEL_PATH = "models/weights/best.pt"
+
+def setting(name: str) -> str:
+    """Read a deployment setting without exposing secret values in the UI."""
+    value = os.getenv(name)
+    if value:
+        return value
+    try:
+        return str(st.secrets.get(name, ""))
+    except (FileNotFoundError, KeyError):
+        return ""
+
+
+def draw_detections(image: np.ndarray, detections: list[dict]) -> np.ndarray:
+    """Draw reviewed detections using green/flagged-red markers."""
+    display = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    for detection in detections:
+        x, y, width, height = [int(value) for value in detection["bbox"]]
+        color = (0, 0, 220) if detection["flagged_for_review"] else (0, 180, 0)
+        cv2.rectangle(display, (x, y), (x + width, y + height), color, 2)
+        label = f"{detection['class']} {detection['final_confidence']:.0f}%"
+        cv2.putText(display, label, (x, max(y - 6, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    return display
+
 
 st.set_page_config(page_title="Anveshan", layout="wide")
 st.title("Anveshan — Marine Debris Detection (Side-Scan Sonar)")
-st.caption("SIH 2026 · PS 26057 · Ministry of Earth Sciences / NIOT")
+st.caption("SIH 2026 · PS 26057 · Roboflow-hosted detection with simulated navigation metadata")
 
 uploaded = st.file_uploader("Upload a sonar image", type=["png", "jpg", "jpeg"])
-
-if uploaded is not None:
-    raw_pil = Image.open(uploaded).convert("L")
-    raw_np = np.array(raw_pil)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Original")
-        st.image(raw_np, use_container_width=True)
-
-    cleaned = clean(raw_np)
-    with col2:
-        st.subheader("Preprocessed (despeckled, contrast-enhanced, nadir masked)")
-        st.image(cleaned, use_container_width=True)
-
-    st.divider()
-    st.subheader("Detections")
-
-    model = None
-    if os.path.exists(MODEL_PATH):
-        from ultralytics import YOLO
-        model = YOLO(MODEL_PATH)
-    else:
-        st.warning(
-            f"No trained model found at `{MODEL_PATH}` yet — showing preprocessing "
-            "only. Train a model and drop `best.pt` there to see live detections."
-        )
-
-    if model is not None:
-        cleaned_bgr = cv2.cvtColor(cleaned, cv2.COLOR_GRAY2BGR)
-        results = model(cleaned_bgr)[0]
-
-        detections = []
-        for box in results.boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            conf = float(box.conf[0])
-            cls_id = int(box.cls[0])
-            cls_name = model.names[cls_id]
-            detections.append({
-                "class": cls_name,
-                "confidence": conf,
-                "bbox": (x1, y1, x2 - x1, y2 - y1),
-            })
-
-        refined = refine_detections(cleaned_bgr, detections)
-
-        # draw boxes
-        display_img = cleaned_bgr.copy()
-        for det in refined:
-            x, y, w, h = [int(v) for v in det["bbox"]]
-            color = (0, 200, 0) if not det["flagged_for_review"] else (0, 0, 200)
-            cv2.rectangle(display_img, (x, y), (x + w, y + h), color, 2)
-            label = f"{det['class']} {det['final_confidence']:.0f}%"
-            cv2.putText(display_img, label, (x, max(y - 5, 10)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-
-        st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), use_container_width=True)
-
-        if refined:
-            st.subheader("Map")
-            meta = generate_simulated_metadata(num_pings=max(10, len(refined)))
-            report = build_report(refined, meta, image_width_px=cleaned.shape[1],
-                                   image_height_px=cleaned.shape[0])
-
-            first_lat = report.entries[0].latitude
-            first_lon = report.entries[0].longitude
-            fmap = folium.Map(location=[first_lat, first_lon], zoom_start=15)
-            for e in report.entries:
-                color = "red" if e.flagged_for_review else "green"
-                folium.Marker(
-                    [e.latitude, e.longitude],
-                    popup=f"{e.image_class} ({e.confidence:.0f}%)",
-                    icon=folium.Icon(color=color),
-                ).add_to(fmap)
-            st_folium(fmap, width=900, height=400)
-
-            st.subheader("Report")
-            os.makedirs("reports", exist_ok=True)
-            report.to_json("reports/latest_report.json")
-            report.to_csv("reports/latest_report.csv")
-
-            with open("reports/latest_report.json") as f:
-                st.download_button("Download JSON report", f.read(),
-                                    file_name="anveshan_report.json")
-            with open("reports/latest_report.csv") as f:
-                st.download_button("Download CSV report", f.read(),
-                                    file_name="anveshan_report.csv")
-        else:
-            st.info("No detections above threshold on this image.")
-else:
+if uploaded is None:
     st.info("Upload a sonar image to begin.")
+    st.stop()
+
+raw_image = np.array(Image.open(uploaded).convert("L"))
+cleaned_image = clean(raw_image)
+original_column, processed_column = st.columns(2)
+with original_column:
+    st.subheader("Original")
+    st.image(raw_image, use_container_width=True)
+with processed_column:
+    st.subheader("Preprocessed")
+    st.image(cleaned_image, use_container_width=True)
+
+st.divider()
+st.subheader("Detections")
+try:
+    client = RoboflowClient(api_key=setting("ROBOFLOW_API_KEY"), model_id=setting("ROBOFLOW_MODEL_ID"))
+except RoboflowConfigurationError:
+    st.warning(
+        "Hosted inference is not configured. Set `ROBOFLOW_API_KEY` and "
+        "`ROBOFLOW_MODEL_ID` in Streamlit secrets or environment variables."
+    )
+    st.stop()
+
+try:
+    started_at = time.perf_counter()
+    detections = client.predict(cleaned_image)
+    inference_ms = (time.perf_counter() - started_at) * 1000
+except RoboflowInferenceError as error:
+    st.error(f"Roboflow inference could not complete: {error}")
+    st.stop()
+
+st.caption(f"Roboflow hosted-inference latency: {inference_ms:.0f} ms")
+refined = refine_detections(cleaned_image, detections)
+st.image(cv2.cvtColor(draw_detections(cleaned_image, refined), cv2.COLOR_BGR2RGB), use_container_width=True)
+
+if not refined:
+    st.info("Roboflow returned no detections at the configured confidence threshold.")
+    st.stop()
+
+st.subheader("Map")
+metadata = generate_simulated_metadata(num_pings=max(10, len(refined)))
+report = build_report(refined, metadata, image_width_px=cleaned_image.shape[1], image_height_px=cleaned_image.shape[0])
+first_entry = report.entries[0]
+map_view = folium.Map(location=[first_entry.latitude, first_entry.longitude], zoom_start=15)
+for entry in report.entries:
+    marker_color = "red" if entry.flagged_for_review else "green"
+    folium.Marker(
+        [entry.latitude, entry.longitude],
+        popup=f"{entry.image_class} ({entry.confidence:.0f}%)",
+        icon=folium.Icon(color=marker_color),
+    ).add_to(map_view)
+st_folium(map_view, width=900, height=400)
+
+st.subheader("Report")
+st.caption("Coordinates and timestamps are simulated for this prototype.")
+st.download_button("Download JSON report", report.to_json_text(), file_name="anveshan_report.json")
+st.download_button("Download CSV report", report.to_csv_text(), file_name="anveshan_report.csv")
