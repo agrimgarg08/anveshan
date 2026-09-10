@@ -61,6 +61,22 @@ For Vercel, set the same variables in the project Environment Variables.
 npm run dev
 ```
 
+### CSV demo mode
+
+With `DEMO_MODE=true`, the API does not call Roboflow. Rename the five demo
+images to match one of these CSV files before uploading them:
+
+- `demo_ghost_pot.png` → `data/demo/demo_ghost_pot.csv`
+- `demo_pipe_crossing.png` → `data/demo/demo_pipe_crossing.csv`
+- `demo_shipwreck.png` → `data/demo/demo_shipwreck.csv`
+- `demo_mixed_field.png` → `data/demo/demo_mixed_field.csv`
+- `demo_review_target.png` → `data/demo/demo_review_target.csv`
+
+The extension can be PNG or JPG; only the filename stem must match. Each CSV
+contains the fixed classes, confidence values, review flags, bounding boxes,
+coordinates, ping numbers, and timestamps returned to the dashboard. Set
+`DEMO_MODE=false` to use live Roboflow inference.
+
 The model ID may be the deployed Roboflow model in
 `<workspace>/<project>/<version>` form, for example
 `dev-manchanda/marine-sonar-debris/1`.

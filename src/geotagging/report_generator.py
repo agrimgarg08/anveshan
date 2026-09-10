@@ -83,18 +83,21 @@ def build_report(
 
         x, y, w, h = det["bbox"]
         cx, cy = x + w / 2, y + h / 2
-        lat, lon = pixel_to_latlon(cx, cy, image_width_px, image_height_px, swath_width_m, ping_row)
+        lat = det.get("latitude")
+        lon = det.get("longitude")
+        if lat is None or lon is None:
+            lat, lon = pixel_to_latlon(cx, cy, image_width_px, image_height_px, swath_width_m, ping_row)
 
         entries.append(ReportEntry(
             detection_id=f"D{idx:03d}",
-            ping_number=int(ping_row["ping_number"]),
+            ping_number=int(det.get("ping_number", ping_row["ping_number"])),
             image_class=det["class"],
             confidence=det.get("final_confidence", det.get("confidence", 0.0)),
             flagged_for_review=det.get("flagged_for_review", False),
             bbox_px=(x, y, w, h),
-            latitude=round(lat, 6),
-            longitude=round(lon, 6),
-            timestamp=str(ping_row["timestamp"]),
+            latitude=round(float(lat), 6),
+            longitude=round(float(lon), 6),
+            timestamp=str(det.get("timestamp", ping_row["timestamp"])),
         ))
 
     return entries
