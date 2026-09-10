@@ -203,7 +203,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div 
+    <div
       className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors"
       onDragOver={(e) => {
         e.preventDefault();
@@ -214,7 +214,7 @@ export default function Dashboard() {
     >
       {/* Invisible full-screen drag overlay to handle drops anywhere and prevent child flicker */}
       {isDragging && (
-        <div 
+        <div
           className="fixed inset-0 z-[100]"
           onDragOver={(e) => {
             e.preventDefault();
@@ -443,7 +443,7 @@ export default function Dashboard() {
                     {result.report && result.report.length > 0 ? (
                       <MapContainer
                         center={[result.report[0].latitude, result.report[0].longitude]}
-                        zoom={8}
+                        zoom={4}
                         style={{ height: '100%', width: '100%' }}
                         className="z-0"
                       >

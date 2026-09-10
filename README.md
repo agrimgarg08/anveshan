@@ -1,111 +1,144 @@
 # Anveshan (अन्वेषण)
 
-AI-powered automated underwater marine debris and anomaly detection system using side-scan sonar (SSS) imagery.
+This repository follows the SIH 2026 template for project submission.
 
-## What it does
+## 1. Project Information
 
-Upload a sonar image → detect debris (ghost nets, pipes, shipwrecks, anomalies) with bounding boxes + confidence scores → view detections on a map → export a structured JSON/CSV report.
+- **Project Title:** Anveshan (अन्वेषण) – AI-Powered Automated Underwater Marine Debris and Anomaly Detection System
+- **PS ID:** SIH26057
+- **PS Title:** AI-Powered Automated Underwater Marine Debris and Anomaly Detection System using Side-Scan Sonar Imagery
+- **Category:** Software
+- **Theme:** Disaster Management
 
-## Pipeline
+## 2. Problem Statement
 
+Detecting marine debris (ghost nets, pipes, shipwrecks, anomalies) manually from Side-Scan Sonar (SSS) imagery is time-consuming and prone to human error. An automated system is needed to quickly and accurately identify underwater objects and hazards to aid in clean-up and navigation.
+
+## 3. Proposed Solution
+
+Anveshan allows users to upload a sonar image which is then preprocessed (despeckle, contrast, nadir-gap mask). The backend processes the image using an AI model to detect debris with bounding boxes and confidence scores. It applies confidence filtering and geotags the detections, ultimately displaying them on an interactive map and allowing the export of a structured JSON/CSV report.
+
+## 4. Key Features
+
+- Sonar image upload and automated preprocessing
+- Marine debris detection (ghost nets, pipes, shipwrecks, anomalies)
+- Interactive map visualization with React Leaflet
+- Bounding boxes and confidence scores filtering
+- Geotagging (pixel → lat/lon mapping)
+- Export structured JSON/CSV reports
+- Demo mode for evaluation
+
+## 5. Technology Stack
+
+- **Frontend:** Next.js (React), Tailwind CSS, React Leaflet
+- **Backend:** Python, FastAPI, OpenCV
+- **Machine Learning:** Roboflow (training and hosted inference API)
+- **Deployment:** Vercel (Next.js + Python serverless)
+- **Datasets:** [PING Ecosystem Ghost-Pot SSS dataset](https://huggingface.co/datasets/PINGEcosystem/sss-crab-pot-detection-ds), [SeabedObjects-KLSG](https://www.kaggle.com/datasets/enochkwatehdongbo/seabedobjects-klsg-dataset), [Marine_PULSE](https://doi.org/10.5281/zenodo.7922705), Synthetic augmentations
+
+## 6. Architecture
+
+See [docs/architecture.md](docs/architecture.md).
+
+```text
+User
+  |
+  v
+Frontend (Next.js Dashboard)
+  |
+  v
+Backend API (FastAPI)
+  |
+  +----> [1] Preprocessing (clean_sonar.py)
+  |
+  v
+Roboflow Hosted ML API
+  |
+  +----> [2] Detection
+  |
+  v
+Backend API (FastAPI)
+  |
+  +----> [3] Confidence filtering (confidence_filter.py)
+  +----> [4] Geotagging & report (report_generator.py)
+  |
+  v
+Frontend (Dashboard Map & Export)
 ```
-Raw sonar tile
-    │
-    ▼
-[1] Preprocessing        src/preprocessing/clean_sonar.py
-    (despeckle, contrast, nadir-gap mask)
-    │
-    ▼
-[2] Detection             Roboflow Hosted API, deployed model version
-    │
-    ▼
-[3] Confidence filtering  src/confidence_filter/confidence_filter.py
-    (shape-regularity fusion, false-positive suppression)
-    │
-    ▼
-[4] Geotagging + report   src/geotagging/report_generator.py
-    (pixel → lat/lon, JSON + CSV output)
-    │
-    ▼
-[5] Dashboard             React + Tailwind (app/page.tsx)
+
+## 7. Repository Structure
+
+```text
+YOUR-SIH-PROJECT/
+├── README.md
+├── SUBMISSION_GUIDE.md
+├── submission/
+│   ├── PRESENTATION.md
+│   └── DEMO.md
+├── app/                  # Next.js React frontend
+├── components/           # React components
+├── api/                  # Python FastAPI backend
+├── data/demo/            # Demo images and CSV mock responses
+├── docs/                 # Architecture documentation
+│   └── architecture.md
+├── assets/
+│   └── screenshots/      # Important screenshots
+├── requirements.txt      # Python dependencies
+├── package.json          # Node.js dependencies
+└── ...
 ```
 
-## Stack
+## 8. Final Presentation
 
-- **Model**: Roboflow-hosted object detector trained on merged SSS datasets
-- **Data prep/training**: Roboflow (merge, augment, split, train, deploy)
-- **Preprocessing/backend**: Python, OpenCV
-- **Dashboard**: Next.js React + Tailwind + React Leaflet
-- **Hardware**: cloud-hosted training and inference; no local GPU required
+Keep your final SIH presentation in the repository whenever the file size allows it.
 
-## Datasets used
+See [submission/PRESENTATION.md](submission/PRESENTATION.md) for the required format.
 
-- [PING Ecosystem Ghost-Pot SSS dataset](https://huggingface.co/datasets/PINGEcosystem/sss-crab-pot-detection-ds) — real annotated SSS imagery, derelict crab-pot/fishing-gear detection
-- SeabedObjects-KLSG (Kaggle) — wrecks, mines
-- Marine_PULSE (Zenodo) — pipes, mounds, platforms
-- Synthetic augmentation (composited objects + acoustic shadows + speckle noise) to cover classes/scenarios underrepresented in public data
+## 9. Demo Video
 
-## Setup
+Add the YouTube/Google Drive link in [submission/DEMO.md](submission/DEMO.md).
 
+## 10. Screenshots / Prototype Photos
+
+Add important screenshots or hardware/prototype photos to `assets/screenshots/`.
+
+## 11. Installation
+
+**Python Backend:**
 ```bash
-conda create -n anveshan python=3.10 -y
-conda activate anveshan
+python -m venv .venv
+# Activate the virtual environment
+# Windows:
+.venv\Scripts\activate
+# Mac/Linux:
+source .venv/bin/activate
+```
+**Installing python requirements:**
+```
 pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env`, then set the deployed Roboflow model ID and
-private API key. Also set `NEXT_PUBLIC_CARTO_API_KEY` with the key requested
-from https://carto.com/basemaps/apikey/ for the map tiles. `.env` is ignored by
-Git and must never be committed.
-For Vercel, set the same variables in the project Environment Variables.
+**Next.js Frontend:**
+```bash
+npm install
+```
+
+**Environment Variables:**
+Copy `.env.example` to `.env`, then set:
+- Roboflow model ID and private API key (e.g., `dev-manchanda/marine-sonar-debris/1`).
+- `NEXT_PUBLIC_CARTO_API_KEY` with the key requested from https://carto.com/basemaps/apikey/ for the map tiles.
+*(Note: Do not commit `.env` to Git).*
+
+## 12. Run
 
 ```bash
 npm run dev
 ```
+*(This starts both the Next.js frontend and the Python serverless functions via Vercel's dev environment).*
 
-### CSV demo mode
+## 13. Future Scope
 
-With `DEMO_MODE=true`, the API does not call Roboflow. Rename the five demo
-images to match one of these CSV files before uploading them:
+Currently, this prototype trains and runs object detection through Roboflow's hosted service because a local GPU is not currently available. The dashboard performs preprocessing, confidence filtering, geotagging, and report generation locally. Local/edge model export is future work and is not claimed for this version.
 
-- `demo_ghost_pot.png` → `data/demo/demo_ghost_pot.csv`
-- `demo_pipe_crossing.png` → `data/demo/demo_pipe_crossing.csv`
-- `demo_shipwreck.png` → `data/demo/demo_shipwreck.csv`
-- `demo_mixed_field.png` → `data/demo/demo_mixed_field.csv`
-- `demo_review_target.png` → `data/demo/demo_review_target.csv`
-
-The extension can be PNG or JPG; only the filename stem must match. Each CSV
-contains the fixed classes, confidence values, review flags, bounding boxes,
-coordinates, ping numbers, and timestamps returned to the dashboard. Set
-`DEMO_MODE=false` to use live Roboflow inference.
-
-The model ID may be the deployed Roboflow model in
-`<workspace>/<project>/<version>` form, for example
-`dev-manchanda/marine-sonar-debris/1`.
-
-## Repo layout
-
-```
-data/            raw / processed / synthetic sonar imagery
-models/          trained weights + training configs
-src/
-  preprocessing/     noise reduction, contrast, nadir-gap masking
-  confidence_filter/ shape-regularity + shadow-consistency scoring
-  geotagging/         pixel -> lat/lon mapping, report generation
-  inference/          Roboflow Hosted API adapter
-app/              Next.js React dashboard
-api/              FastAPI inference endpoint
-reports/         sample JSON/CSV outputs
-notebooks/       exploration / training notebooks
-```
-
-## Deployment scope
-
-This prototype trains and runs object detection through Roboflow's hosted
-service because a local GPU is not currently available. The dashboard performs
-preprocessing, confidence filtering, geotagging, and report generation locally.
-Local/edge model export is future work and is not claimed for this version.
-
-## Team
-
-Built by Team Unstable
+---
+**Team:** Built by Team Unstable
