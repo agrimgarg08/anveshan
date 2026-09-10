@@ -77,7 +77,7 @@ async def process_image(file: UploadFile = File(...)):
                 "bbox": [int(x) for x in d["bbox"]]
             })
             
-        report_entries = build_report(
+        report = build_report(
             report_detections,
             ping_metadata,
             image_width_px=cleaned_image.shape[1],
@@ -89,7 +89,7 @@ async def process_image(file: UploadFile = File(...)):
             "width": cleaned_image.shape[1],
             "height": cleaned_image.shape[0],
             "detections": report_detections,
-            "report": [asdict(entry) for entry in report_entries]
+            "report": [asdict(entry) for entry in report.entries]
         })
         
     except HTTPException:

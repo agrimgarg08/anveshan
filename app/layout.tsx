@@ -14,7 +14,7 @@ const yatraOne = Yatra_One({
 });
 
 export const metadata: Metadata = {
-  title: "Anveshan",
+  title: "अन्वेषण",
   description: "Marine Debris Detection System",
 };
 

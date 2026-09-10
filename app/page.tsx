@@ -11,6 +11,11 @@ const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { 
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
 
 export default function Home() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,6 +24,30 @@ export default function Home() {
   const [result, setResult] = useState<any>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    setAuthenticated(window.sessionStorage.getItem('anveshan-authenticated') === 'true');
+    setAuthReady(true);
+  }, []);
+
+  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Demo-only gate for the submission prototype. Replace with a real auth provider before production use.
+    if (username === 'admin' && password === 'anveshan2026') {
+      window.sessionStorage.setItem('anveshan-authenticated', 'true');
+      setAuthenticated(true);
+      setAuthError(null);
+    } else {
+      setAuthError('Invalid credentials.');
+    }
+  };
+
+  const handleLogout = () => {
+    window.sessionStorage.removeItem('anveshan-authenticated');
+    setAuthenticated(false);
+    setPassword('');
+    setResult(null);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -153,6 +182,38 @@ export default function Home() {
     });
   }, []);
 
+  if (!authReady) {
+    return <main className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">Loading Anveshan…</main>;
+  }
+
+  if (!authenticated) {
+    return (
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-950 px-6 text-gray-100">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-900/30 shadow-[0_0_120px_rgba(34,211,238,0.08)]" />
+        <div className="relative w-full max-w-md rounded-xl border border-gray-800 bg-gray-900/95 p-8 shadow-2xl">
+          <div className="mb-8 text-center">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">अन्वेषण</p>
+            <h1 className="text-4xl font-yatra font-bold">अन्वेषण</h1>
+            <p className="mt-3 text-sm text-gray-400">Sign in to access the sonar analysis console.</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <label className="block text-sm text-gray-300">
+              Username
+              <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" className="mt-2 w-full rounded border border-gray-700 bg-gray-950 px-3 py-3 text-gray-100 outline-none transition focus:border-cyan-400" />
+            </label>
+            <label className="block text-sm text-gray-300">
+              Password
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" className="mt-2 w-full rounded border border-gray-700 bg-gray-950 px-3 py-3 text-gray-100 outline-none transition focus:border-cyan-400" />
+            </label>
+            {authError && <p className="border-l-2 border-red-400 bg-red-950/40 px-3 py-2 text-sm text-red-200">{authError}</p>}
+            <button type="submit" className="w-full rounded border border-cyan-400 bg-cyan-400/10 px-4 py-3 font-semibold text-cyan-300 transition hover:-translate-y-0.5 hover:bg-cyan-400/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/50">Enter console</button>
+          </form>
+          <p className="mt-6 text-center text-xs text-gray-500">Authorized personnel only · prototype access gate</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-8 pt-24">
       {/* Pill-like navbar with glass blur */}
@@ -161,13 +222,14 @@ export default function Home() {
           <span className="font-yatra text-2xl tracking-wide text-blue-400">अन्वेषण</span>
         </div>
         <div className="text-sm font-medium text-gray-300">
-          SIH 2026
+          Sonar console
         </div>
+        <button onClick={handleLogout} className="ml-4 text-xs text-gray-400 transition hover:text-cyan-300">Log out</button>
       </nav>
 
       <header className="mb-8 text-center mt-4">
         <h1 className="text-5xl font-yatra font-bold mb-2">अन्वेषण</h1>
-        <p className="text-gray-400">Marine Debris Detection System (PS 26057)</p>
+        <p className="text-gray-400">Marine Debris Detection System</p>
       </header>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
