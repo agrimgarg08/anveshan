@@ -1,0 +1,137 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { authenticated, authReady, login } = useAuth();
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (authReady && authenticated) {
+      router.replace('/dashboard');
+    }
+  }, [authReady, authenticated, router]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setAuthError(null);
+
+    const success = login(username.trim(), password);
+    if (success) {
+      toast.success('Access granted. Redirecting to Console...');
+      router.push('/dashboard');
+    } else {
+      setAuthError('Invalid credentials. Please verify your username and password.');
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!authReady || (authReady && authenticated)) {
+    return (
+      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 transition-colors">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950 px-6 py-12 text-slate-900 dark:text-slate-100 font-sans transition-colors">
+      {/* Background glow effects */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 dark:opacity-20 mix-blend-soft-light pointer-events-none"></div>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-500/10 bg-cyan-100 dark:bg-cyan-500/5 blur-[120px]" />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 sm:p-10 shadow-xl dark:shadow-2xl"
+      >
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-yatra font-bold text-slate-900 dark:text-white mb-2 tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-slate-900 to-slate-600 dark:from-slate-100 dark:via-white dark:to-slate-300">
+            अन्वेषण
+          </h1>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-950/60 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              placeholder="Enter username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-950/60 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              placeholder="Enter password"
+            />
+          </div>
+
+          <AnimatePresence>
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-300 flex items-start gap-2.5"
+              >
+                <AlertTriangle size={16} className="text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full mt-3 rounded-xl bg-cyan-600 dark:bg-cyan-500 hover:bg-cyan-500 dark:hover:bg-cyan-400 disabled:opacity-50 px-4 py-3.5 text-sm font-semibold text-white dark:text-slate-950 transition-all shadow-[0_0_20px_rgba(8,145,178,0.25)] dark:shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:-translate-y-0.5 flex items-center justify-center gap-2 focus:outline-none"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <span>Access Console</span>
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/80 text-center">
+          <p className="text-xs text-slate-500 flex items-center justify-center gap-1.5">
+            <ShieldCheck size={14} className="text-cyan-600 dark:text-cyan-500/70" />
+            Secure Side-Scan Sonar Analysis Pipeline
+          </p>
+        </div>
+      </motion.div>
+    </main>
+  );
+}
+

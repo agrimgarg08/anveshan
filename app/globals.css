@@ -1,19 +1,9 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: var(--font-plus-jakarta-sans), sans-serif;
   --font-yatra: var(--font-yatra-one), serif;
-}
-
-:root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-plus-jakarta-sans), sans-serif;
 }
 
 .font-sans {

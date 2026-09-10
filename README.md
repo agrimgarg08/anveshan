@@ -2,8 +2,6 @@
 
 AI-powered automated underwater marine debris and anomaly detection system using side-scan sonar (SSS) imagery.
 
-Built for SIH 2026 — Problem Statement 26057 (Ministry of Earth Sciences / NIOT).
-
 ## What it does
 
 Upload a sonar image → detect debris (ghost nets, pipes, shipwrecks, anomalies) with bounding boxes + confidence scores → view detections on a map → export a structured JSON/CSV report.
@@ -82,10 +80,6 @@ api/              FastAPI inference endpoint
 reports/         sample JSON/CSV outputs
 notebooks/       exploration / training notebooks
 ```
-
-## Status
-
-🚧 In progress — SIH 2026 build, 1-week sprint.
 
 ## Deployment scope
 

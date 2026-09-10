@@ -1,354 +1,109 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ShieldCheck, MapPin, BarChart, ArrowRight } from 'lucide-react';
 
-// Dynamically import map components because they require window object
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-cyan-500/30 overflow-x-hidden font-sans transition-colors">
+      {/* Background Effects */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-600/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 dark:opacity-20 opacity-5 mix-blend-soft-light"></div>
+      </div>
 
-export default function Home() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authReady, setAuthReady] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  
-  const [result, setResult] = useState<any>(null);
-  
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    setAuthenticated(window.sessionStorage.getItem('anveshan-authenticated') === 'true');
-    setAuthReady(true);
-  }, []);
-
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    // Demo-only gate for the submission prototype. Replace with a real auth provider before production use.
-    if (username === 'admin' && password === 'anveshan2026') {
-      window.sessionStorage.setItem('anveshan-authenticated', 'true');
-      setAuthenticated(true);
-      setAuthError(null);
-    } else {
-      setAuthError('Invalid credentials.');
-    }
-  };
-
-  const handleLogout = () => {
-    window.sessionStorage.removeItem('anveshan-authenticated');
-    setAuthenticated(false);
-    setPassword('');
-    setResult(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      setFile(selected);
-      setPreviewUrl(URL.createObjectURL(selected));
-      setResult(null);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    
-    setLoading(true);
-    setResult(null);
-    setApiError(null);
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-      const res = await fetch('/api/process', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload.detail || 'The processing API returned an error.');
-      }
-      
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      console.error(err);
-      setApiError(err instanceof Error ? err.message : 'Error processing image');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Draw bounding boxes on canvas
-  useEffect(() => {
-    if (result && result.cleaned_image && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        // Draw detections
-        if (result.detections) {
-          result.detections.forEach((d: any) => {
-            const [x, y, w, h] = d.bbox;
-            const flagged = d.flagged_for_review;
-            
-            ctx.strokeStyle = flagged ? 'rgba(255, 165, 0, 0.8)' : 'rgba(0, 128, 0, 0.8)';
-            ctx.lineWidth = 3;
-            
-            if (flagged) {
-               ctx.setLineDash([5, 5]);
-            } else {
-               ctx.setLineDash([]);
-            }
-            
-            ctx.strokeRect(x, y, w, h);
-            
-            // Draw label background
-            ctx.setLineDash([]);
-            ctx.fillStyle = ctx.strokeStyle;
-            ctx.font = '14px sans-serif';
-            const label = `${d.class} ${d.final_confidence.toFixed(0)}%`;
-            const textMetrics = ctx.measureText(label);
-            ctx.fillRect(x, Math.max(0, y - 20), textMetrics.width + 10, 20);
-            
-            // Draw label text
-            ctx.fillStyle = '#fff';
-            ctx.fillText(label, x + 5, Math.max(15, y - 5));
-          });
-        }
-      };
-      img.src = `data:image/png;base64,${result.cleaned_image}`;
-    }
-  }, [result]);
-
-  const downloadJson = () => {
-    if (!result || !result.report) return;
-    const blob = new Blob([JSON.stringify(result.report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'anveshan_report.json';
-    a.click();
-  };
-
-  const downloadCsv = () => {
-    if (!result || !result.report || result.report.length === 0) return;
-    const headers = Object.keys(result.report[0]).join(',');
-    const rows = result.report.map((r: any) => 
-      Object.values(r).map(v => {
-        if (typeof v === 'object' && v !== null) {
-          return `"${JSON.stringify(v).replace(/"/g, '""')}"`;
-        }
-        if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))) {
-          return `"${v.replace(/"/g, '""')}"`;
-        }
-        return v;
-      }).join(',')
-    );
-    const csv = [headers, ...rows].join('\\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'anveshan_report.csv';
-    a.click();
-  };
-
-  // Map icon fix for leaflet
-  useEffect(() => {
-    import('leaflet').then((L) => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      });
-    });
-  }, []);
-
-  if (!authReady) {
-    return <main className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">Loading Anveshan…</main>;
-  }
-
-  if (!authenticated) {
-    return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-950 px-6 text-gray-100">
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-900/30 shadow-[0_0_120px_rgba(34,211,238,0.08)]" />
-        <div className="relative w-full max-w-md rounded-xl border border-gray-800 bg-gray-900/95 p-8 shadow-2xl">
-          <div className="mb-8 text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">अन्वेषण</p>
-            <h1 className="text-4xl font-yatra font-bold">अन्वेषण</h1>
-            <p className="mt-3 text-sm text-gray-400">Sign in to access the sonar analysis console.</p>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-5">
-            <label className="block text-sm text-gray-300">
-              Username
-              <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" className="mt-2 w-full rounded border border-gray-700 bg-gray-950 px-3 py-3 text-gray-100 outline-none transition focus:border-cyan-400" />
-            </label>
-            <label className="block text-sm text-gray-300">
-              Password
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" className="mt-2 w-full rounded border border-gray-700 bg-gray-950 px-3 py-3 text-gray-100 outline-none transition focus:border-cyan-400" />
-            </label>
-            {authError && <p className="border-l-2 border-red-400 bg-red-950/40 px-3 py-2 text-sm text-red-200">{authError}</p>}
-            <button type="submit" className="w-full rounded border border-cyan-400 bg-cyan-400/10 px-4 py-3 font-semibold text-cyan-300 transition hover:-translate-y-0.5 hover:bg-cyan-400/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/50">Enter console</button>
-          </form>
-          <p className="mt-6 text-center text-xs text-gray-500">Authorized personnel only · prototype access gate</p>
+      {/* Hero Section */}
+      <main className="relative z-10 pt-20 pb-24 lg:pt-28 lg:pb-32">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
+            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-tight text-slate-900 dark:text-slate-100"
+          >
+            Clearer Oceans with <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 dark:from-cyan-400 dark:via-blue-500 dark:to-indigo-500 font-yatra">
+              अन्वेषण
+            </span>
+          </motion.h1>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
+            className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed mb-12"
+          >
+            An advanced AI-powered Side-Scan Sonar (SSS) analysis platform designed to detect, classify, and geotag marine debris in real-time.
+          </motion.p>
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
+            className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
+          >
+            <Link href="/dashboard" className="w-full sm:w-auto group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-semibold rounded-full transition-all overflow-hidden">
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+              <span className="relative flex items-center justify-center gap-2">
+                Start Detection <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+            <a href="#features" className="w-full sm:w-auto px-8 py-4 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium rounded-full border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all text-center backdrop-blur-sm">
+              Explore Features
+            </a>
+          </motion.div>
         </div>
       </main>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-8 pt-24">
-      {/* Pill-like navbar with glass blur */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800/60 backdrop-blur-md border border-gray-700/50 px-6 py-3 rounded-full z-50 flex items-center justify-between shadow-lg min-w-[300px]">
-        <div className="flex items-center space-x-2">
-          <span className="font-yatra text-2xl tracking-wide text-blue-400">अन्वेषण</span>
-        </div>
-        <div className="text-sm font-medium text-gray-300">
-          Sonar console
-        </div>
-        <button onClick={handleLogout} className="ml-4 text-xs text-gray-400 transition hover:text-cyan-300">Log out</button>
-      </nav>
-
-      <header className="mb-8 text-center mt-4">
-        <h1 className="text-5xl font-yatra font-bold mb-2">अन्वेषण</h1>
-        <p className="text-gray-400">Marine Debris Detection System</p>
-      </header>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Upload Sonar Image</h2>
-            <input 
-              type="file" 
-              accept="image/png, image/jpeg" 
-              onChange={handleFileChange}
-              className="block w-full text-sm text-gray-300
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-600 file:text-white
-                hover:file:bg-blue-700"
-            />
-            {previewUrl && (
-              <button 
-                onClick={handleUpload}
-                disabled={loading}
-                className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md disabled:opacity-50"
-              >
-                {loading ? 'Processing...' : 'Run Detection'}
-              </button>
-            )}
-            {apiError && (
-              <p className="mt-4 rounded border border-red-700 bg-red-950/40 p-3 text-sm text-red-200">
-                {apiError}
-              </p>
-            )}
+      {/* Features Section */}
+      <section id="features" className="relative z-10 py-32 bg-slate-100/50 dark:bg-slate-950/50 border-t border-slate-200/50 dark:border-slate-900/50 backdrop-blur-sm transition-colors">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Marine Surveyors</h2>
+            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Utilitarian design meets cutting-edge machine learning to deliver actionable insights from noisy sonar data.</p>
           </div>
           
-          {result && (
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold mb-4">Report Downloads</h2>
-              <div className="flex space-x-4">
-                <button onClick={downloadJson} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">JSON</button>
-                <button onClick={downloadCsv} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">CSV</button>
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+            {/* Feature 1 */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 hover:border-cyan-400/30 dark:hover:border-cyan-500/30 hover:bg-white dark:hover:bg-slate-900 transition-all group shadow-sm"
+            >
+              <div className="w-14 h-14 bg-cyan-100 dark:bg-cyan-500/10 rounded-2xl flex items-center justify-center mb-6 border border-cyan-200 dark:border-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
+                <ShieldCheck className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
               </div>
-            </div>
-          )}
+              <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100">AI Detection</h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">Automated YOLO-based inference filters out natural clutter like rocks to highlight man-made debris with high confidence.</p>
+            </motion.div>
+            
+            {/* Feature 2 */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 hover:border-blue-400/30 dark:hover:border-blue-500/30 hover:bg-white dark:hover:bg-slate-900 transition-all group shadow-sm"
+            >
+              <div className="w-14 h-14 bg-blue-100 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 border border-blue-200 dark:border-blue-500/20 group-hover:scale-110 transition-transform duration-300">
+                <MapPin className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100">Geospatial Mapping</h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">Instantly map detections from pixel space to real-world coordinates using simulated tow-path metadata.</p>
+            </motion.div>
+            
+            {/* Feature 3 */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 hover:border-indigo-400/30 dark:hover:border-indigo-500/30 hover:bg-white dark:hover:bg-slate-900 transition-all group shadow-sm"
+            >
+              <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 border border-indigo-200 dark:border-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
+                <BarChart className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100">Automated Reports</h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">Export clean, structured reports in JSON and CSV formats for immediate analysis and dashboard integration.</p>
+            </motion.div>
+          </div>
         </div>
-        
-        <div className="lg:col-span-2 space-y-8">
-          {previewUrl && !result && !loading && (
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold mb-4">Preview</h2>
-              <img src={previewUrl} alt="Preview" className="max-w-full h-auto rounded" />
-            </div>
-          )}
-          
-          {loading && (
-            <div className="bg-gray-800 p-6 rounded-lg flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          )}
-          
-          {result && (
-            <>
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4">Detections</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-lg text-gray-400 mb-2">Original</h3>
-                    <img src={previewUrl!} alt="Original" className="w-full rounded" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg text-gray-400 mb-2">Processed & Detected</h3>
-                    <canvas ref={canvasRef} className="w-full rounded bg-black" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4">Map View</h2>
-                <p className="text-sm text-yellow-500 mb-4">Coordinates simulated for this prototype — real deployment would use sonar navigation metadata.</p>
-                <div className="h-96 rounded overflow-hidden">
-                  {result.report && result.report.length > 0 ? (
-                    <MapContainer center={[result.report[0].latitude, result.report[0].longitude]} zoom={15} style={{ height: '100%', width: '100%' }}>
-                      <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      />
-                      {result.report.map((entry: any) => (
-                         <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]}>
-                           <Popup>
-                             {entry.image_class} ({entry.confidence.toFixed(0)}%)
-                           </Popup>
-                         </Marker>
-                      ))}
-                    </MapContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center bg-gray-700">
-                      No detections to map.
-                    </div>
-                  )}
-                </div>
-                
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold mb-2">Detection List</h3>
-                  {result.report && result.report.length > 0 ? (
-                    <ul className="space-y-2">
-                      {result.report.map((entry: any) => (
-                        <li key={entry.detection_id} className={`p-2 rounded flex justify-between ${entry.flagged_for_review ? 'bg-orange-900/50 border border-orange-700' : 'bg-green-900/50 border border-green-700'}`}>
-                          <span>{entry.image_class} {entry.flagged_for_review && <span className="text-orange-400 text-sm ml-2">· needs review</span>}</span>
-                          <span className="font-mono">{entry.confidence.toFixed(1)}%</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-400">No detections found.</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
