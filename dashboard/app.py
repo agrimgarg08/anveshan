@@ -42,22 +42,31 @@ def draw_detections(image: np.ndarray, detections_df: pd.DataFrame) -> np.ndarra
     """Draw reviewed detections using green/flagged-red markers."""
     display = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     for _, detection in detections_df.iterrows():
-        bbox = detection["bbox"]
-        if isinstance(bbox, str):
+        bbox = detection.get("bbox", [0, 0, 0, 0])
+        if pd.isna(bbox):
+            bbox = [0, 0, 0, 0]
+        elif isinstance(bbox, str):
             try:
                 bbox = ast.literal_eval(bbox)
             except Exception:
-                continue
+                bbox = [0, 0, 0, 0]
         
         try:
             x, y, width, height = [int(value) for value in bbox]
         except Exception:
-            continue
+            x, y, width, height = 0, 0, 0, 0
             
-        color = (0, 0, 220) if detection["flagged_for_review"] else (0, 180, 0)
+        color = (0, 0, 220) if detection.get("flagged_for_review", False) else (0, 180, 0)
         cv2.rectangle(display, (x, y), (x + width, y + height), color, 2)
-        label = f"{detection['class']} {float(detection['final_confidence']):.0f}%"
-        if detection["flagged_for_review"]:
+        
+        try:
+            conf = float(detection.get('final_confidence', 0.0))
+        except (ValueError, TypeError):
+            conf = 0.0
+            
+        cls_name = str(detection.get('class', 'unknown'))
+        label = f"{cls_name} {conf:.0f}%"
+        if detection.get("flagged_for_review", False):
             label += " [FLAGGED]"
         cv2.putText(display, label, (x, max(y - 6, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
     return display
@@ -197,16 +206,24 @@ if not edited_df.empty:
     # Convert dataframe back to list of dicts for build_report
     report_detections = []
     for _, row in edited_df.iterrows():
-        bbox = row["bbox"]
-        if isinstance(bbox, str):
+        bbox = row.get("bbox", [0, 0, 0, 0])
+        if pd.isna(bbox):
+            bbox = [0, 0, 0, 0]
+        elif isinstance(bbox, str):
             try:
                 bbox = ast.literal_eval(bbox)
             except Exception:
                 bbox = [0, 0, 0, 0]
+                
+        try:
+            conf = float(row.get("final_confidence", 0.0))
+        except (ValueError, TypeError):
+            conf = 0.0
+            
         report_detections.append({
-            "class": row["class"],
-            "final_confidence": float(row["final_confidence"]),
-            "flagged_for_review": bool(row["flagged_for_review"]),
+            "class": str(row.get("class", "unknown")),
+            "final_confidence": conf,
+            "flagged_for_review": bool(row.get("flagged_for_review", False)),
             "bbox": bbox
         })
     
