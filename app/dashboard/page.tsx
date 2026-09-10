@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Download, FileJson, FileSpreadsheet, Map as MapIcon, Image as ImageIcon, CheckCircle, AlertTriangle, Loader2, BarChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
+import { useTheme } from 'next-themes';
 import 'leaflet/dist/leaflet.css';
 
 // Dynamically import map components because they require window object
@@ -20,8 +21,11 @@ const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ss
 export default function Dashboard() {
   const router = useRouter();
   const { authenticated, authReady } = useAuth();
+  const { resolvedTheme } = useTheme();
+  
+  const mapTheme = resolvedTheme === 'dark' ? 'dark_all' : 'light_all';
   const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
-  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png${
+  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${mapTheme}/{z}/{x}/{y}{r}.png${
     cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
   }`;
   
@@ -450,6 +454,7 @@ export default function Dashboard() {
                         className="z-0"
                       >
                         <TileLayer
+                          key={mapTheme}
                           url={cartoTileUrl}
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         />
