@@ -8,7 +8,7 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
 - `None` means the task can start immediately.
 - A task may start only after every task listed in `Depends on` is checked off.
 - Optional tasks are explicitly marked `Optional`; all other tasks are part of the MVP.
-- Keep the class list to 3–4 classes unless the data review proves that more are practical.
+- Current submission class list is three classes: debris net/pot, pipe/cylinder, and shipwreck. Dataset expansion is a next iteration.
 
 ## Day 1 — Scope, repository, and environment
 
@@ -16,7 +16,7 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** None  
   **Done when:** `reports/domain_notes.md` contains at least five domain notes and the inspected image sources are recorded.
 
-- [ ] **D1-02 — Confirm the MVP and class scope.** Record the MVP flow: upload → preprocess → detect → map → export JSON/CSV. Confirm the initial classes: debris net/pot, pipe/cylinder, shipwreck, and unknown anomaly.  
+- [ ] **D1-02 — Confirm the MVP and class scope.** Record the MVP flow: upload → preprocess → detect → map → export JSON/CSV. Confirm the current submission classes: debris net/pot, pipe/cylinder, and shipwreck; defer unknown-anomaly expansion to the next iteration.
   **Depends on:** D1-01  
   **Done when:** The selected class list and MVP flow are documented in `reports/domain_notes.md` or an equivalent project note.
 

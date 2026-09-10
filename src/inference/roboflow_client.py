@@ -30,9 +30,10 @@ class RoboflowClient:
                  session: requests.Session | None = None) -> None:
         if not api_key or not api_key.strip():
             raise RoboflowConfigurationError("ROBOFLOW_API_KEY is required.")
-        if not model_id or not model_id.strip() or "/" not in model_id.strip("/"):
+        parts = [part for part in model_id.strip("/").split("/") if part]
+        if len(parts) not in (2, 3):
             raise RoboflowConfigurationError(
-                "ROBOFLOW_MODEL_ID must be '<project-slug>/<version>', for example 'marine-sonar-debris/1'."
+                "ROBOFLOW_MODEL_ID must be '<project>/<version>' or '<workspace>/<project>/<version>'."
             )
         self.api_key = api_key.strip()
         self.model_id = model_id.strip("/")
@@ -43,7 +44,11 @@ class RoboflowClient:
 
     @property
     def endpoint(self) -> str:
-        return f"https://detect.roboflow.com/{self.model_id}"
+        # Dashboard links include workspace/project/version, while the hosted
+        # detect endpoint addresses the project slug and version.
+        parts = self.model_id.split("/")
+        endpoint_model = "/".join(parts[-2:])
+        return f"https://detect.roboflow.com/{endpoint_model}"
 
     def predict(self, image: np.ndarray) -> list[dict[str, Any]]:
         """Send a grayscale/BGR sonar image and normalize API predictions."""
