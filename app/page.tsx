@@ -14,6 +14,7 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   
   const [result, setResult] = useState<any>(null);
   
@@ -33,6 +34,7 @@ export default function Home() {
     
     setLoading(true);
     setResult(null);
+    setApiError(null);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -44,14 +46,15 @@ export default function Home() {
       });
       
       if (!res.ok) {
-        throw new Error('API Error: ' + await res.text());
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.detail || 'The processing API returned an error.');
       }
       
       const data = await res.json();
       setResult(data);
     } catch (err) {
       console.error(err);
-      alert('Error processing image');
+      setApiError(err instanceof Error ? err.message : 'Error processing image');
     } finally {
       setLoading(false);
     }
@@ -190,6 +193,11 @@ export default function Home() {
               >
                 {loading ? 'Processing...' : 'Run Detection'}
               </button>
+            )}
+            {apiError && (
+              <p className="mt-4 rounded border border-red-700 bg-red-950/40 p-3 text-sm text-red-200">
+                {apiError}
+              </p>
             )}
           </div>
           

@@ -24,7 +24,7 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** None  
   **Done when:** All directories exist, are represented in version control where appropriate, and generated datasets/weights are excluded by `.gitignore`.
 
-- [ ] **D1-04 — Set up the Python environment.** Create the Python 3.10 environment and install the dependencies from `requirements.txt` plus the stack required by the plan: Ultralytics, OpenCV, NumPy, pandas, Matplotlib, Streamlit, Folium, Pillow, scikit-image, FastAPI, and Uvicorn.  
+- [ ] **D1-04 — Set up the Python/API environment.** Create the Python 3.10 environment and install the dependencies from `requirements.txt` for the FastAPI inference endpoint and local preprocessing.
   **Depends on:** D1-03  
   **Done when:** The environment activates successfully and all required imports complete without errors.
 
@@ -136,9 +136,9 @@ Tasks are ordered by the seven-day sprint. Every task has a stable ID, a depende
   **Depends on:** D5-03  
   **Done when:** `reports/report.json` and `reports/report.csv` are generated and their contents are cross-checked.
 
-## Day 6 — Dashboard and optional API
+## Day 6 — React dashboard and API
 
-- [ ] **D6-01 — Build the Streamlit application shell.** Create `dashboard/app.py` with an upload panel and the end-to-end state flow.  
+- [ ] **D6-01 — Build the React application shell.** Use `app/page.tsx` with an upload panel and the end-to-end state flow calling `/api/process`.
   **Depends on:** D3-02, D4-06, D5-04  
   **Done when:** The app starts locally and accepts a sonar image or supported log input.
 

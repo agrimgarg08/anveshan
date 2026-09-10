@@ -6,18 +6,39 @@ import sys
 import os
 import io
 import base64
+from pathlib import Path
 from PIL import Image
 from dataclasses import asdict
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    # Keep local runs working even before the optional python-dotenv package is
+    # installed. Vercel injects project variables directly in deployment.
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key.strip(), value)
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from preprocessing.clean_sonar import clean
-from inference.roboflow_client import RoboflowClient, RoboflowConfigurationError
+from inference.roboflow_client import RoboflowClient, RoboflowConfigurationError, RoboflowInferenceError
 from confidence_filter.confidence_filter import refine_detections
 from geotagging.report_generator import generate_simulated_metadata, build_report
 
 app = FastAPI()
+
+def setting(name: str) -> str:
+    """Read deployment settings from environment variables only."""
+    return os.getenv(name, "").strip()
 
 def numpy_to_base64(img_arr: np.ndarray) -> str:
     _, buffer = cv2.imencode('.png', img_arr)
@@ -34,18 +55,20 @@ async def process_image(file: UploadFile = File(...)):
         cleaned_image = clean(raw_image)
         
         # 2. Inference
-        api_key = os.getenv("ROBOFLOW_API_KEY")
-        model_id = os.getenv("ROBOFLOW_MODEL_ID")
-        
-        refined = []
-        if api_key and model_id:
-            try:
-                client = RoboflowClient(api_key=api_key, model_id=model_id)
-                detections = client.predict(cleaned_image)
-                refined = refine_detections(cleaned_image, detections)
-            except Exception as e:
-                print(f"Inference error: {e}")
-                # We can still return cleaned image even if inference fails
+        api_key = setting("ROBOFLOW_API_KEY")
+        model_id = setting("ROBOFLOW_MODEL_ID")
+        if not api_key or not model_id:
+            raise HTTPException(
+                status_code=503,
+                detail="Roboflow is not configured. Set ROBOFLOW_API_KEY and ROBOFLOW_MODEL_ID in .env or your deployment environment.",
+            )
+
+        try:
+            client = RoboflowClient(api_key=api_key, model_id=model_id)
+            detections = client.predict(cleaned_image)
+            refined = refine_detections(cleaned_image, detections)
+        except (RoboflowConfigurationError, RoboflowInferenceError) as e:
+            raise HTTPException(status_code=502, detail=f"Roboflow inference failed: {e}") from e
         
         # Format detections
         flat_detections = []
@@ -86,6 +109,8 @@ async def process_image(file: UploadFile = File(...)):
             "report": [asdict(entry) for entry in report.entries]
         })
         
+    except HTTPException:
+        raise
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 

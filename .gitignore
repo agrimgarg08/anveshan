@@ -31,8 +31,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# Local environment files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -79,5 +80,5 @@ reports/*.csv
 .vscode/
 *.swp
 
-# Streamlit
-.streamlit/
+# Legacy local secrets (the app now uses .env.local)
+.streamlit/secrets.toml

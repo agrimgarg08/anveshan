@@ -29,7 +29,7 @@ Raw sonar tile
     (pixel → lat/lon, JSON + CSV output)
     │
     ▼
-[5] Dashboard             dashboard/app.py (Streamlit)
+[5] Dashboard             React + Tailwind (app/page.tsx)
 ```
 
 ## Stack
@@ -37,7 +37,7 @@ Raw sonar tile
 - **Model**: Roboflow-hosted object detector trained on merged SSS datasets
 - **Data prep/training**: Roboflow (merge, augment, split, train, deploy)
 - **Preprocessing/backend**: Python, OpenCV
-- **Dashboard**: Streamlit + folium (map view)
+- **Dashboard**: Next.js React + Tailwind + React Leaflet
 - **Hardware**: cloud-hosted training and inference; no local GPU required
 
 ## Datasets used
@@ -55,13 +55,12 @@ conda activate anveshan
 pip install -r requirements.txt
 ```
 
-Create `.streamlit/secrets.toml` from `dashboard/secrets.toml.example`, then
-set the deployed Roboflow model ID and your private API key. Do not commit this
-file. Alternatively, set `ROBOFLOW_API_KEY` and `ROBOFLOW_MODEL_ID` as
-environment variables.
+Copy `.env.example` to `.env`, then set the deployed Roboflow model ID and
+private API key. `.env` is ignored by Git and must never be committed.
+For Vercel, set the same variables in the project Environment Variables.
 
 ```bash
-streamlit run dashboard/app.py
+npm run dev
 ```
 
 The model ID may be the deployed Roboflow model in
@@ -78,7 +77,8 @@ src/
   confidence_filter/ shape-regularity + shadow-consistency scoring
   geotagging/         pixel -> lat/lon mapping, report generation
   inference/          Roboflow Hosted API adapter
-dashboard/       Streamlit app
+app/              Next.js React dashboard
+api/              FastAPI inference endpoint
 reports/         sample JSON/CSV outputs
 notebooks/       exploration / training notebooks
 ```
