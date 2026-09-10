@@ -136,6 +136,10 @@ npm run dev
 ```
 *(This starts both the Next.js frontend and the Python serverless functions via Vercel's dev environment).*
 
+**Demo Login Credentials:**
+- **Username:** `admin`
+- **Password:** `anveshan2026`
+
 ## 13. Future Scope
 
 Currently, this prototype trains and runs object detection through Roboflow's hosted service because a local GPU is not currently available. The dashboard performs preprocessing, confidence filtering, geotagging, and report generation locally. Local/edge model export is future work and is not claimed for this version.

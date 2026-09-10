@@ -60,6 +60,14 @@ export default function LoginPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Please log in to continue to the console
           </p>
+          
+          <div className="mt-4 mx-auto w-fit p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-xs text-slate-600 dark:text-slate-400 text-left">
+            <span className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Demo Credentials</span>
+            <div className="flex flex-col gap-1">
+              <div>User: <code className="bg-slate-200 dark:bg-slate-700/80 px-1 py-0.5 rounded text-cyan-700 dark:text-cyan-400 font-mono">admin</code></div>
+              <div>Pass: <code className="bg-slate-200 dark:bg-slate-700/80 px-1 py-0.5 rounded text-cyan-700 dark:text-cyan-400 font-mono">anveshan2026</code></div>
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
