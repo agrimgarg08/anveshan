@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image
 
 from backend.src.api.main import CLASSES, MAX_BYTES, create_app
+from backend.src.api.detection_with_fallback import detect_gemini
 
 
 class ApiTests(unittest.TestCase):
@@ -20,7 +21,7 @@ class ApiTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         path = Path(self.tmp.name) / "best.pt"
         path.touch()
-        env = patch.dict(os.environ, {"MODEL_PATH": str(path), "CORS_ORIGINS": "https://demo.vercel.app"})
+        env = patch.dict(os.environ, {"MODEL_PATH": str(path), "CORS_ORIGINS": "https://demo.vercel.app", "GEMINI_API_KEY": ""})
         env.start()
         self.addCleanup(env.stop)
         self.boxes = [SimpleNamespace(
@@ -46,6 +47,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json(), {
             "detections": [{"class": "marine_anomaly", "confidence": 0.82, "bbox": [10, 20, 30, 40]}],
             "image": {"width": 100, "height": 80},
+            "source": "local_yolo", "fallback_reason": "missing_api_key",
         })
 
     def test_empty_results(self):
@@ -74,11 +76,46 @@ class ApiTests(unittest.TestCase):
         })
         self.assertEqual(response.headers["access-control-allow-origin"], "https://demo.vercel.app")
 
-    def test_wrong_classes_fail_startup(self):
+    def test_wrong_classes_fail_on_fallback(self):
         model = SimpleNamespace(names={0: "0"})
-        with self.assertRaisesRegex(RuntimeError, "Model classes must"):
-            with TestClient(create_app(lambda _: model)):
-                pass
+        with TestClient(create_app(lambda _: model)) as client:
+            buffer = BytesIO()
+            Image.new("L", (100, 80)).save(buffer, format="PNG")
+            response = client.post("/detect", files={"file": ("sonar.png", buffer.getvalue(), "image/png")})
+            self.assertEqual(response.status_code, 503)
+
+    def test_gemini_response_does_not_load_yolo(self):
+        with patch("backend.src.api.main.detect_gemini", return_value=[{
+            "class": "shipwreck", "confidence": None, "confidence_label": "high",
+            "bbox": [10, 20, 30, 40],
+        }]):
+            response = self.upload()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["source"], "gemini")
+        self.assertIsNone(response.json()["detections"][0]["confidence"])
+        self.assertIsNone(self.client.app.state.model)
+
+    def test_gemini_coordinates_and_qualitative_confidence(self):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+            with patch("google.genai.Client") as client_class:
+                client_class.return_value.models.generate_content.return_value.text = (
+                    '[{"label":"shipwreck","confidence":"high","box_2d":[100,200,600,700]}]'
+                )
+                result = detect_gemini(Image.new("RGB", (200, 100)), (640, 640))
+        self.assertEqual(result, [{
+            "class": "shipwreck", "confidence": None, "confidence_label": "high",
+            "bbox": [128.0, 64.0, 320.0, 320.0],
+        }])
+
+    def test_invalid_gemini_box_uses_local_model(self):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+            with patch("google.genai.Client") as client_class:
+                client_class.return_value.models.generate_content.return_value.text = (
+                    '[{"label":"shipwreck","confidence":"high","box_2d":[0,0,1200,100]}]'
+                )
+                result = self.upload().json()
+        self.assertEqual(result["source"], "local_yolo")
+        self.assertEqual(result["fallback_reason"], "invalid_gemini_response")
 
     def test_missing_weights_fail_startup(self):
         with patch.dict(os.environ, {"MODEL_PATH": str(Path(self.tmp.name) / "missing.pt")}):

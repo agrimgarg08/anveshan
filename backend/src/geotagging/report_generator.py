@@ -13,12 +13,14 @@ class ReportEntry:
     detection_id: str
     ping_number: int
     image_class: str
-    confidence: float
+    confidence: float | None
     flagged_for_review: bool
     bbox_px: tuple
     latitude: float
     longitude: float
     timestamp: str
+    source: str | None = None
+    confidence_label: str | None = None
 
 def generate_simulated_metadata(
     num_pings: int = 50,
@@ -98,6 +100,8 @@ def build_report(
             latitude=round(float(lat), 6),
             longitude=round(float(lon), 6),
             timestamp=str(det.get("timestamp", ping_row["timestamp"])),
+            source=det.get("source"),
+            confidence_label=det.get("confidence_label"),
         ))
 
     return entries

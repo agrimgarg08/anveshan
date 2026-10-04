@@ -5,8 +5,8 @@ import cv2
 import requests
 import numpy as np
 
-def predict(image: np.ndarray, api_url: str, confidence: int = 25, overlap: int = 30) -> list[dict]:
-    """Send a grayscale/BGR sonar image to the custom tunnel and return normalized API predictions."""
+def predict(image: np.ndarray, api_url: str, original_image: np.ndarray | None = None) -> dict:
+    """Send processed and optional original sonar images to the inference API."""
     if not api_url:
         raise ValueError("INFERENCE_API_URL is required.")
     
@@ -14,20 +14,20 @@ def predict(image: np.ndarray, api_url: str, confidence: int = 25, overlap: int 
     if not success:
         raise RuntimeError("Could not encode image for tunnel inference.")
         
-    response = requests.post(
-        api_url,
-        params={"confidence": confidence, "overlap": overlap},
-        files={"file": ("image.jpg", encoded.tobytes(), "image/jpeg")},
-        timeout=20.0,
-    )
+    files = {"file": ("image.jpg", encoded.tobytes(), "image/jpeg")}
+    if original_image is not None:
+        success, original_encoded = cv2.imencode('.png', original_image)
+        if not success:
+            raise RuntimeError('Could not encode original image for inference.')
+        files['original'] = ('original.png', original_encoded.tobytes(), 'image/png')
+    response = requests.post(api_url, files=files, timeout=35.0)
     response.raise_for_status()
-    
-    out = []
-    for p in response.json().get("predictions", []):
-        x, y, w, h = float(p["x"]), float(p["y"]), float(p["width"]), float(p["height"])
-        out.append({
-            "class": str(p["class"]), 
-            "confidence": float(p["confidence"]),
-            "bbox": (x, y, w, h)
-        })
-    return out
+
+    payload = response.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get('detections'), list):
+        raise ValueError('Inference API returned an invalid detection response.')
+    return {
+        'detections': payload['detections'],
+        'source': payload.get('source', 'local_yolo'),
+        'fallback_reason': payload.get('fallback_reason'),
+    }

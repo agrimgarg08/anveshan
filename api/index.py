@@ -86,7 +86,8 @@ async def process_image(file: UploadFile = File(...)):
         exif_lat, exif_lon = get_exif_location(image)
         is_real_location = (exif_lat is not None and exif_lon is not None)
         
-        image = image.convert("L")
+        original_rgb = image.convert("RGB")
+        image = original_rgb.convert("L")
         raw_image = np.array(image)
         
         # 1. Preprocess
@@ -95,6 +96,8 @@ async def process_image(file: UploadFile = File(...)):
         # 2. Inference or filename-matched demo results
         demo_mode = os.getenv("DEMO_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
         demo_scenario = None
+        detection_source = 'demo' if demo_mode else None
+        fallback_reason = None
         if demo_mode:
             demo_result = load_demo_results(file.filename or "")
             if demo_result is None:
@@ -113,8 +116,16 @@ async def process_image(file: UploadFile = File(...)):
                 )
 
             try:
-                detections = predict(cleaned_image, api_url)
-                refined = refine_detections(cleaned_image, detections)
+                inference = predict(cleaned_image, api_url, np.array(original_rgb)[:, :, ::-1].copy())
+                detection_source = inference['source']
+                fallback_reason = inference['fallback_reason']
+                detections = inference['detections']
+                if detection_source == 'gemini':
+                    # Gemini's high/medium/low words are not numeric probabilities.
+                    refined = [{**d, 'final_confidence': None, 'flagged_for_review': True}
+                               for d in detections]
+                else:
+                    refined = refine_detections(cleaned_image, detections)
             except (ValueError, RuntimeError, requests.RequestException) as e:
                 raise HTTPException(status_code=502, detail=f"Tunnel inference failed: {e}") from e
         
@@ -127,6 +138,8 @@ async def process_image(file: UploadFile = File(...)):
                 "final_confidence": d["final_confidence"],
                 "flagged_for_review": d["flagged_for_review"],
                 "bbox": d["bbox"],
+                "source": detection_source,
+                "confidence_label": d.get("confidence_label"),
             }
             if demo_mode:
                 flat_detection.update({
@@ -149,9 +162,12 @@ async def process_image(file: UploadFile = File(...)):
         for d in flat_detections:
             report_detections.append({
                 "class": d["class"],
-                "final_confidence": float(d["final_confidence"]),
+                "final_confidence": (float(d["final_confidence"])
+                                     if d["final_confidence"] is not None else None),
                 "flagged_for_review": bool(d["flagged_for_review"]),
                 "bbox": [int(x) for x in d["bbox"]],
+                "source": detection_source,
+                "confidence_label": d.get("confidence_label"),
                 **({
                     "ping_number": d["ping_number"],
                     "latitude": d["latitude"],
@@ -176,6 +192,8 @@ async def process_image(file: UploadFile = File(...)):
             "demo_mode": demo_mode,
             "demo_scenario": demo_scenario,
             "is_real_location": is_real_location,
+            "source": detection_source,
+            "fallback_reason": fallback_reason,
         })
         
     except HTTPException:

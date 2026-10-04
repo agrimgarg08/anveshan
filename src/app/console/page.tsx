@@ -134,7 +134,10 @@ export default function Dashboard() {
             ctx.setLineDash([]);
             ctx.fillStyle = ctx.strokeStyle;
             ctx.font = 'bold 13px Inter, sans-serif';
-            const label = `${d.class} ${d.final_confidence.toFixed(0)}%`;
+            const confidenceText = d.final_confidence == null
+              ? `${d.confidence_label ?? 'unrated'} (qualitative)`
+              : `${d.final_confidence.toFixed(0)}%`;
+            const label = `${d.class} ${confidenceText}`;
             const textMetrics = ctx.measureText(label);
             ctx.fillRect(x, Math.max(0, y - 24), textMetrics.width + 12, 24);
 
@@ -365,6 +368,12 @@ export default function Dashboard() {
                   </span>
                 )}
               </div>
+              {result && (
+                <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                  Detected via: {result.source === 'local_yolo' ? 'local YOLO' : result.source === 'gemini' ? 'Gemini' : 'demo data'}
+                  {result.fallback_reason && ` (fallback: ${result.fallback_reason})`}
+                </p>
+              )}
 
               {!previewUrl && !loading && !result && (
                 <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/30 text-slate-500 transition-colors">
@@ -473,7 +482,7 @@ export default function Dashboard() {
                             <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]} icon={customIcon}>
                               <Popup className="text-slate-900 font-sans">
                                 <div className="font-semibold capitalize">{entry.image_class.replace(/_/g, ' ')}</div>
-                                <div className="text-sm text-slate-600">Confidence: {entry.confidence.toFixed(1)}%</div>
+                                <div className="text-sm text-slate-600">{entry.confidence == null ? `Qualitative: ${entry.confidence_label ?? 'unrated'}` : `Confidence: ${entry.confidence.toFixed(1)}%`}</div>
                               </Popup>
                             </Marker>
                           );
@@ -516,7 +525,9 @@ export default function Dashboard() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-mono text-slate-800 dark:text-slate-100">{entry.confidence.toFixed(1)}<span className="text-sm text-slate-500">%</span></p>
+                              <p className="text-xl font-mono text-slate-800 dark:text-slate-100">
+                                {entry.confidence == null ? entry.confidence_label ?? 'unrated' : <>{entry.confidence.toFixed(1)}<span className="text-sm text-slate-500">%</span></>}
+                              </p>
                             </div>
                           </div>
                         ))}
