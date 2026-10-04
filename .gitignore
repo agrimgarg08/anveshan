@@ -16,6 +16,8 @@ __pycache__/
 /.venv/
 /.venv-*/
 /venv/
+.pytest_cache/
+.ruff_cache/
 
 # Local secrets and settings
 .env*
@@ -31,6 +33,7 @@ __pycache__/
 /yolov8n.pt
 /.tools/
 .ipynb_checkpoints/
+scripts/
 
 # Editor and operating system files
 .vscode/

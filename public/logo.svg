@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="63.5 63.5 173 173">
+  <!-- Outer ring -->
+  <circle
+    cx="150"
+    cy="150"
+    r="85"
+    fill="none"
+    stroke="#0092B8"
+    stroke-width="3"
+  />
+
+  <!-- Inner ring -->
+  <circle
+    cx="150"
+    cy="150"
+    r="55"
+    fill="none"
+    stroke="#0092B8"
+    stroke-width="7"
+  />
+
+  <!-- Solid center -->
+  <circle
+    cx="150"
+    cy="150"
+    r="25"
+    fill="#0092B8"
+  />
+</svg>

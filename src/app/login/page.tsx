@@ -46,7 +46,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-transparent px-6 py-12 text-slate-900 dark:text-slate-100 font-sans transition-colors">
+    <main className="relative flex min-h-[calc(100vh-12rem)] items-center justify-center overflow-hidden bg-transparent px-6 pt-8 pb-24 text-slate-900 dark:text-slate-100 font-sans transition-colors">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

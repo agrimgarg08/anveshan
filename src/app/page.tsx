@@ -6,10 +6,13 @@ import { ShieldCheck, MapPin, BarChart, ArrowRight } from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-transparent text-slate-900 dark:text-slate-100 selection:bg-cyan-500/30 overflow-x-hidden font-sans transition-colors">
+    <div className="flex flex-col w-full bg-transparent text-slate-900 dark:text-slate-100 selection:bg-cyan-500/30 overflow-x-hidden font-sans transition-colors">
       {/* Hero Section */}
-      <main className="relative z-10 pt-20 pb-24 lg:pt-28 lg:pb-32">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center">
+      <main className="relative z-10 min-h-screen flex flex-col items-center -mt-[104px]">
+        {/* Top Spacer: flex-grow ensures centering, min-h ensures it never overlaps the navbar */}
+        <div className="flex-grow min-h-[104px]" />
+        
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center py-10 w-full">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -48,6 +51,9 @@ export default function LandingPage() {
             </a>
           </motion.div>
         </div>
+        
+        {/* Bottom Spacer: balances the top spacer to center the content */}
+        <div className="flex-grow" />
       </main>
 
       {/* Features Section */}

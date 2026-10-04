@@ -1,20 +1,22 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { UploadCloud, Download, FileJson, FileSpreadsheet, Map as MapIcon, Image as ImageIcon, CheckCircle, AlertTriangle, Loader2, BarChart } from 'lucide-react';
-import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from 'next-themes';
 import 'leaflet/dist/leaflet.css';
 
-// Dynamically import map components because they require window object
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+import GroupedAnalytics from '@/components/console/GroupedAnalytics';
+import SingleView from '@/components/console/SingleView';
+import UploadWidget from '@/components/console/UploadWidget';
+import QueueDrawer from '@/components/console/QueueDrawer';
+import TopControls from '@/components/console/TopControls';
+
+import { useFileProcessing } from '@/hooks/useFileProcessing';
+import { ReportEntry } from '@/types';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -23,175 +25,21 @@ export default function Dashboard() {
 
   const mapTheme = resolvedTheme === 'dark' ? 'dark_all' : 'light_all';
   const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
-  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${mapTheme}/{z}/{x}/{y}{r}.png${cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
-    }`;
+  const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${mapTheme}/{z}/{x}/{y}{r}.png${cartoApiKey ? '?key=' + encodeURIComponent(cartoApiKey) : ''}`;
 
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [apiError, setApiError] = useState<string | null>(null);
+  // State Management
+  const { queue, processingStatus, activeViewIndex, setActiveViewIndex, handleFileChange, handleClear, handleRemoveQueueItem, startProcessing, processAddedFiles } = useFileProcessing();
+  const [viewMode, setViewMode] = useState<'single' | 'grouped'>('single');
   const [isDragging, setIsDragging] = useState(false);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [result, setResult] = useState<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (authReady && !authenticated) {
-      router.replace('/login');
-    }
-  }, [authReady, authenticated, router]);
-
-  const handleFile = (selectedFile: File) => {
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!validTypes.includes(selectedFile.type)) {
-      toast.error('Invalid file type. Please upload a JPEG or PNG image.');
-      return;
-    }
-
-    setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
-    setResult(null);
-    setApiError(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-
-
-  const handleUpload = async () => {
-    if (!file) return;
-
-    setLoading(true);
-    setResult(null);
-    setApiError(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const promise = fetch('/api/process', {
-      method: 'POST',
-      body: formData,
-    }).then(async (res) => {
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload.detail || 'The processing API returned an error.');
-      }
-      return res.json();
-    });
-
-    toast.promise(promise, {
-      loading: 'Analyzing Sonar Image...',
-      success: (data) => {
-        setResult(data);
-        return `Analysis complete! Found ${data.report?.length || 0} detections.`;
-      },
-      error: (err) => {
-        setApiError(err.message);
-        return err.message;
-      }
-    });
-
-    promise.catch(() => { }).finally(() => setLoading(false));
-  };
-
-  // Draw bounding boxes on canvas
-  useEffect(() => {
-    if (result && result.cleaned_image && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        if (result.detections) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          result.detections.forEach((d: any) => {
-            const [x, y, w, h] = d.bbox;
-            const flagged = d.flagged_for_review;
-
-            // Neon-like colors
-            ctx.strokeStyle = flagged ? '#f97316' : '#10b981'; // orange-500 : emerald-500
-            ctx.lineWidth = 3;
-
-            if (flagged) {
-              ctx.setLineDash([8, 6]);
-            } else {
-              ctx.setLineDash([]);
-            }
-
-            ctx.strokeRect(x, y, w, h);
-
-            ctx.setLineDash([]);
-            ctx.fillStyle = ctx.strokeStyle;
-            ctx.font = 'bold 13px Inter, sans-serif';
-            const confidenceText = d.final_confidence == null
-              ? `${d.confidence_label ?? 'unrated'} (qualitative)`
-              : `${d.final_confidence.toFixed(0)}%`;
-            const label = `${d.class} ${confidenceText}`;
-            const textMetrics = ctx.measureText(label);
-            ctx.fillRect(x, Math.max(0, y - 24), textMetrics.width + 12, 24);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(label, x + 6, Math.max(16, y - 8));
-          });
-        }
-      };
-      img.src = `data:image/png;base64,${result.cleaned_image}`;
-    }
-  }, [result]);
-
-  const downloadJson = () => {
-    if (!result || !result.report) return;
-    const blob = new Blob([JSON.stringify(result.report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'anveshan_report.json';
-    a.click();
-  };
-
-  const downloadCsv = () => {
-    if (!result || !result.report || result.report.length === 0) return;
-    const headers = Object.keys(result.report[0]).join(',');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = result.report.map((r: any) =>
-      Object.values(r).map(v => {
-        if (typeof v === 'object' && v !== null) {
-          return `"${JSON.stringify(v).replace(/"/g, '""')}"`;
-        }
-        if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\\n'))) {
-          return `"${v.replace(/"/g, '""')}"`;
-        }
-        return v;
-      }).join(',')
-    );
-    const csv = [headers, ...rows].join('\\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'anveshan_report.csv';
-    a.click();
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [leafletLib, setLeafletLib] = useState<any>(null);
+  const [isQueueDrawerOpen, setIsQueueDrawerOpen] = useState(false);
 
   // Map icon fix for leaflet
+  const [leafletLib, setLeafletLib] = useState<typeof import('leaflet') | null>(null);
+
   useEffect(() => {
     import('leaflet').then((leaflet) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
+      // @ts-expect-error - Leaflet private API
+      delete (leaflet.Icon.Default.prototype)._getIconUrl;
       leaflet.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -201,6 +49,114 @@ export default function Dashboard() {
     });
   }, []);
 
+  useEffect(() => {
+    if (authReady && !authenticated) {
+      router.replace('/login');
+    }
+  }, [authReady, authenticated, router]);
+
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (!e.dataTransfer) return;
+
+    const items = Array.from(e.dataTransfer.items);
+    const files: File[] = [];
+
+    interface WebkitEntry {
+      isFile: boolean;
+      isDirectory: boolean;
+      name: string;
+      file: (cb: (file: File) => void) => void;
+      createReader: () => { readEntries: (cb: (entries: WebkitEntry[]) => void) => void };
+    }
+
+    const traverseFileTree = async (item: WebkitEntry, path: string = '') => {
+      return new Promise<void>((resolve) => {
+        if (item.isFile) {
+          item.file((file: File) => {
+            files.push(file);
+            resolve();
+          });
+        } else if (item.isDirectory) {
+          const dirReader = item.createReader();
+          dirReader.readEntries(async (entries: WebkitEntry[]) => {
+            for (const entry of entries) {
+              await traverseFileTree(entry, path + item.name + '/');
+            }
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      });
+    };
+
+    const traversePromises = items.map((item) => {
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry() as unknown as WebkitEntry;
+        if (entry) {
+          return traverseFileTree(entry);
+        }
+      }
+      return Promise.resolve();
+    });
+
+    await Promise.all(traversePromises);
+
+    if (files.length > 0) {
+      processAddedFiles(files);
+      setIsQueueDrawerOpen(true);
+    }
+  };
+
+
+  // Global Aggregations
+  const globalReport: (ReportEntry & { source_file: string })[] = [];
+  queue.forEach(item => {
+    if (item.status === 'done' && item.data?.report) {
+      item.data.report.forEach((entry: ReportEntry) => {
+        globalReport.push({ ...entry, source_file: item.file.name });
+      });
+    }
+  });
+
+  const downloadJson = () => {
+    if (globalReport.length === 0) return;
+    const blob = new Blob([JSON.stringify(globalReport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'anveshan_batch_report.json';
+    a.click();
+  };
+
+  const downloadCsv = () => {
+    if (globalReport.length === 0) return;
+    const headers = Object.keys(globalReport[0]).join(',');
+    const rows = globalReport.map((r) =>
+      Object.values(r).map(v => {
+        if (typeof v === 'object' && v !== null) {
+          return `"${JSON.stringify(v).replace(/"/g, '""')}"`;
+        }
+        if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))) {
+          return `"${v.replace(/"/g, '""')}"`;
+        }
+        return v;
+      }).join(',')
+    );
+    const csv = [headers, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'anveshan_batch_report.csv';
+    a.click();
+  };
+
   if (!authReady || !authenticated) {
     return (
       <main className="flex min-h-[70vh] items-center justify-center bg-transparent text-slate-500 dark:text-slate-400 transition-colors">
@@ -209,9 +165,14 @@ export default function Dashboard() {
     );
   }
 
+  const activeItem = queue[activeViewIndex];
+  const processedCount = queue.filter(q => q.status === 'done').length;
+  const errorCount = queue.filter(q => q.status === 'error').length;
+  const pendingCount = queue.filter(q => q.status === 'pending').length;
+
   return (
     <div
-      className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors"
+      className="flex-1 bg-transparent text-slate-900 dark:text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col transition-colors min-h-screen pb-6 relative"
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -219,7 +180,6 @@ export default function Dashboard() {
         setIsDragging(true);
       }}
     >
-      {/* Invisible full-screen drag overlay to handle drops anywhere and prevent child flicker */}
       {isDragging && (
         <div
           className="fixed inset-0 z-[100]"
@@ -234,322 +194,146 @@ export default function Dashboard() {
             setIsDragging(false);
           }}
           onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsDragging(false);
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-              handleFile(e.dataTransfer.files[0]);
-            }
+            handleDrop(e);
           }}
         />
       )}
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+      <QueueDrawer
+        queue={queue}
+        activeViewIndex={activeViewIndex}
+        setActiveViewIndex={setActiveViewIndex}
+        setViewMode={setViewMode}
+        handleRemoveQueueItem={handleRemoveQueueItem}
+        processingStatus={processingStatus}
+        processedCount={processedCount}
+        isOpen={isQueueDrawerOpen}
+        setIsOpen={setIsQueueDrawerOpen}
+      />
 
-          {/* Left Column: Upload & Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="xl:col-span-4 space-y-6"
-          >
-            <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm min-h-[400px] flex flex-col shadow-sm dark:shadow-none transition-colors">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
-                <UploadCloud size={20} className="text-cyan-600 dark:text-cyan-400" /> Upload Sonar Data
-              </h2>
 
-              {/* Drag and drop area */}
-              <div
-                tabIndex={0}
-                onClick={() => document.getElementById('file-upload')?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    document.getElementById('file-upload')?.click();
-                  }
-                }}
-                className={`relative flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900
-                  ${isDragging ? 'border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-400/5' : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}
-                  ${file ? 'border-solid border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900' : ''}`}
-              >
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept="image/png, image/jpeg"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+      {/* Main Content Area */}
+      <motion.main
+        initial={false}
+        animate={{
+          paddingLeft: isQueueDrawerOpen ? 320 + 24 : 24,
+          paddingRight: 24
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="flex-1 w-full flex flex-col pt-0 pb-20 md:pb-32"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="max-w-[1200px] w-full mx-auto flex flex-col"
+        >
+          <TopControls
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            globalReport={globalReport}
+            downloadJson={downloadJson}
+            downloadCsv={downloadCsv}
+            showTabs={queue.length > 0}
+          />
 
-                {file ? (
-                  <div className="flex flex-col items-center w-full max-w-[240px] overflow-hidden">
-                    <ImageIcon className="w-10 h-10 text-cyan-600 dark:text-cyan-500 mb-3 shrink-0" />
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full">{file.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setFile(null); setPreviewUrl(null); setResult(null); }}
-                      className="mt-4 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 text-xs font-medium transition-colors duration-300"
-                    >
-                      Remove file
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 transition-colors">
-                      <UploadCloud className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Click to upload or drag and drop</p>
-                    <p className="text-xs text-slate-500 mt-2">PNG or JPG (max. 10MB)</p>
-                  </div>
-                )}
-              </div>
-
-              {previewUrl && (
-                <button
-                  onClick={handleUpload}
-                  disabled={loading}
-                  className="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-semibold py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
-                  {loading ? (
-                    <><Loader2 size={18} className="animate-spin" /> Analyzing Sonar Image...</>
-                  ) : (
-                    <><MapIcon size={18} /> Run Pipeline Detection</>
-                  )}
-                </button>
-              )}
-
-            </div>
-
-            {/* Reports Card */}
-            {result && result.report && (
+          <AnimatePresence mode="wait">
+            {queue.length === 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none transition-colors"
+                key="empty-queue"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
+                className="h-full w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20 text-slate-500 transition-colors min-h-[500px]"
               >
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                  <Download size={20} className="text-indigo-600 dark:text-indigo-400" /> Export Reports
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={downloadJson}
-                    className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 transition"
-                  >
-                    <FileJson size={18} className="text-slate-500 dark:text-slate-400" /> JSON
-                  </button>
-                  <button
-                    onClick={downloadCsv}
-                    className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 transition"
-                  >
-                    <FileSpreadsheet size={18} className="text-slate-500 dark:text-slate-400" /> CSV
-                  </button>
-                </div>
+                <Layers className="w-16 h-16 mb-4 text-slate-300 dark:text-slate-700" />
+                <p className="text-lg font-medium text-slate-700 dark:text-slate-300">Upload Data to Begin</p>
+                <p className="text-sm mt-2 max-w-sm text-center">Drag and drop a folder of images, multiple selected images, or a ZIP archive into the upload area.</p>
               </motion.div>
             )}
-          </motion.div>
 
-          {/* Right Column: Visualization */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="xl:col-span-8 space-y-6"
-          >
-
-            {/* Image Preview & Results */}
-            <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm min-h-[400px] flex flex-col shadow-sm dark:shadow-none transition-colors">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <ImageIcon size={20} className="text-blue-600 dark:text-blue-400" /> Sonar Analysis View
-                </h2>
-                {result && (
-                  <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">
-                    <CheckCircle size={14} /> Processing Complete
-                  </span>
-                )}
-              </div>
-              {result && (
-                <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                  Detected via: {result.source === 'local_yolo' ? 'local YOLO' : result.source === 'gemini' ? 'Gemini' : 'demo data'}
-                  {result.fallback_reason && ` (fallback: ${result.fallback_reason})`}
-                </p>
-              )}
-
-              {!previewUrl && !loading && !result && (
-                <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/30 text-slate-500 transition-colors">
-                  <p>Upload a sonar image to begin analysis</p>
-                </div>
-              )}
-
-              {loading && (
-                <div className="flex-1 flex flex-col items-center justify-center p-8">
-                  <div className="w-full space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800/50 rounded animate-pulse"></div>
-                        <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800/20 rounded-xl animate-pulse border border-slate-200 dark:border-slate-800/50"></div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="h-4 w-48 bg-slate-200 dark:bg-slate-800/50 rounded animate-pulse"></div>
-                        <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800/20 rounded-xl animate-pulse border border-slate-200 dark:border-slate-800/50"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {previewUrl && !result && !loading && (
-                <div className="flex-1 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-100 dark:bg-black flex items-center justify-center transition-colors">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={previewUrl} alt="Upload Preview" className="max-w-full max-h-[600px] object-contain" />
-                </div>
-              )}
-
-              {result && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Raw Input</h3>
-                    </div>
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-100 dark:bg-black aspect-square flex items-center justify-center transition-colors">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={previewUrl!} alt="Original Input" className="max-w-full max-h-full object-contain" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Detections (Preprocessed)</h3>
-                    </div>
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-100 dark:bg-black aspect-square flex items-center justify-center relative transition-colors">
-                      <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Map and Detection List (Only if result exists) */}
-            {result && (
+            {queue.length > 0 && viewMode === 'single' && activeItem && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                key="single-view"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* Map View */}
-                <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm flex flex-col shadow-sm dark:shadow-none transition-colors">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                      <MapIcon size={20} className="text-emerald-600 dark:text-emerald-400" /> Geolocation
+                {/* Viewer */}
+                <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none transition-colors">
+                  <div className="flex items-center justify-between mb-4 h-8">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 truncate pr-4">
+                      <ImageIcon size={20} className="text-cyan-600 dark:text-cyan-500 shrink-0" />
+                      <span className="truncate">{activeItem.file.name}</span>
                     </h2>
-                  </div>
-                  {result.is_real_location ? (
-                    <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-200/80 text-xs px-3 py-2 rounded-lg mb-4 flex gap-2 items-start transition-colors">
-                      <CheckCircle size={14} className="shrink-0 mt-0.5" />
-                      <p>Real GPS Coordinates extracted from image EXIF metadata.</p>
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-200/80 text-xs px-3 py-2 rounded-lg mb-4 flex gap-2 items-start transition-colors">
-                      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                      <p>No EXIF GPS data found. Coordinates are simulated for this prototype.</p>
-                    </div>
-                  )}
 
-                  <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 min-h-[300px] z-0 relative transition-colors">
-                    {result.report && result.report.length > 0 ? (
-                      <MapContainer
-                        center={[result.report[0].latitude, result.report[0].longitude]}
-                        zoom={4}
-                        style={{ height: '100%', width: '100%' }}
-                        className="z-0"
-                      >
-                        <TileLayer
-                          key={mapTheme}
-                          url={cartoTileUrl}
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                        />
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {result.report.map((entry: any) => {
-                          const iconHtml = entry.flagged_for_review
-                            ? '<div style="background-color:#f97316; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>'
-                            : '<div style="background-color:#10b981; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>';
-                          const customIcon = leafletLib ? leafletLib.divIcon({
-                            html: iconHtml,
-                            className: '',
-                            iconSize: [16, 16],
-                            iconAnchor: [8, 8],
-                          }) : undefined;
-                          return (
-                            <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]} icon={customIcon}>
-                              <Popup className="text-slate-900 font-sans">
-                                <div className="font-semibold capitalize">{entry.image_class.replace(/_/g, ' ')}</div>
-                                <div className="text-sm text-slate-600">{entry.confidence == null ? `Qualitative: ${entry.confidence_label ?? 'unrated'}` : `Confidence: ${entry.confidence.toFixed(1)}%`}</div>
-                              </Popup>
-                            </Marker>
-                          );
-                        })}
-                      </MapContainer>
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-500 text-sm transition-colors">
-                        No geographic data available for mapping.
-                      </div>
-                    )}
+                    {/* Pagination Controls */}
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shrink-0 border border-slate-200 dark:border-slate-700">
+                      <button
+                        disabled={activeViewIndex === 0}
+                        onClick={() => setActiveViewIndex(prev => prev - 1)}
+                        className="p-1 rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-50 shadow-sm transition-transform active:scale-95 disabled:cursor-not-allowed"
+                        title="Previous Image"
+                      ><ChevronLeft size={16} /></button>
+                      <span className="text-xs font-medium px-2 min-w-[40px] text-center text-slate-700 dark:text-slate-300" title="Current Image">{activeViewIndex + 1} / {queue.length}</span>
+                      <button
+                        disabled={activeViewIndex === queue.length - 1}
+                        onClick={() => setActiveViewIndex(prev => prev + 1)}
+                        className="p-1 rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-50 shadow-sm transition-transform active:scale-95 disabled:cursor-not-allowed"
+                        title="Next Image"
+                      ><ChevronRight size={16} /></button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Detection Ledger */}
-                <div className="bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-sm flex flex-col shadow-sm dark:shadow-none transition-colors">
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                    <BarChart size={20} className="text-purple-600 dark:text-purple-400" /> Detection Ledger
-                  </h2>
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {result.report && result.report.length > 0 ? (
-                      <div className="space-y-3">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {result.report.map((entry: any) => (
-                          <div
-                            key={entry.detection_id}
-                            className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${entry.flagged_for_review
-                              ? 'bg-orange-50 dark:bg-orange-500/5 border-orange-200 dark:border-orange-500/20'
-                              : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20'
-                              }`}
-                          >
-                            <div>
-                              <p className="font-semibold text-slate-900 dark:text-slate-200 capitalize">{entry.image_class.replace(/_/g, ' ')}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{entry.detection_id}</span>
-                                {entry.flagged_for_review && (
-                                  <span className="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded transition-colors">
-                                    Needs Review
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-mono text-slate-800 dark:text-slate-100">
-                                {entry.confidence == null ? entry.confidence_label ?? 'unrated' : <>{entry.confidence.toFixed(1)}<span className="text-sm text-slate-500">%</span></>}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900/30 transition-colors">
-                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 transition-colors">
-                          <CheckCircle size={32} className="text-emerald-500/50" />
-                        </div>
-                        <p className="font-medium text-slate-700 dark:text-slate-300">All Clear</p>
-                        <p className="mt-1">No targets detected matching the anomaly threshold.</p>
-                      </div>
-                    )}
-                  </div>
+                  <SingleView
+                    activeItem={activeItem}
+                    mapTheme={mapTheme}
+                    cartoTileUrl={cartoTileUrl}
+                    leafletLib={leafletLib}
+                  />
                 </div>
               </motion.div>
             )}
 
-          </motion.div>
+            {queue.length > 0 && viewMode === 'grouped' && (
+              <motion.div
+                key="grouped-view"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}
+              >
+                <GroupedAnalytics
+                  processedCount={processedCount}
+                  totalQueue={queue.length}
+                  globalReport={globalReport}
+                  cartoTileUrl={cartoTileUrl}
+                  mapTheme={mapTheme}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </motion.main>
+
+      {/* Sticky Bottom Area for Upload Widget */}
+      <div className="sticky bottom-6 w-full h-[64px] z-30 pointer-events-none mt-auto flex justify-center">
+        <div className="pointer-events-auto relative w-full flex justify-center">
+          <div className="absolute bottom-0 flex justify-center">
+            <UploadWidget
+              queue={queue}
+              isDragging={isDragging}
+              handleFileChange={(e) => {
+                handleFileChange(e);
+                if (e.target.files && e.target.files.length > 0) setIsQueueDrawerOpen(true);
+              }}
+              handleClear={() => {
+                handleClear();
+                setIsQueueDrawerOpen(false);
+              }}
+              processingStatus={processingStatus}
+              pendingCount={pendingCount}
+              processedCount={processedCount}
+              errorCount={errorCount}
+              startProcessing={startProcessing}
+            />
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
-

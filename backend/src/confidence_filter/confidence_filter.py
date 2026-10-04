@@ -27,7 +27,7 @@ def shape_regularity_score(image: np.ndarray, bbox: tuple) -> float:
     """
     x, y, w, h = [int(v) for v in bbox]
     x, y = max(0, x), max(0, y)
-    crop = image[y:y + h, x:x + w]
+    crop = image[y : y + h, x : x + w]
     if crop.size == 0:
         return 0.5  # neutral fallback if bbox is degenerate
 

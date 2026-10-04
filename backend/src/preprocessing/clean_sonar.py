@@ -42,7 +42,7 @@ def mask_nadir_gap(image: np.ndarray, variance_threshold: float = 5.0) -> np.nda
     band near image center. Masked to mid-gray so the model doesn't learn
     it as a feature, rather than leaving it as a hard black stripe.
     """
-    h, w = image.shape[:2]
+    _h, w = image.shape[:2]
     col_variance = image.astype(np.float64).var(axis=0)
     low_var_cols = np.where(col_variance < variance_threshold)[0]
 
@@ -80,8 +80,8 @@ def clean(image: np.ndarray, target_size: int = 640) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    import sys
     import os
+    import sys
 
     if len(sys.argv) < 2:
         print("Usage: python clean_sonar.py path/to/sample_image.png")
