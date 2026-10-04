@@ -103,7 +103,7 @@ npm install
 **Environment Variables:**
 Copy `.env.example` to `.env`, then set:
 - `INFERENCE_API_URL` with your local inference tunnel URL ending in `/detect`.
-- Set `DEMO_MODE=false` to use live inference. Set `GEMINI_API_KEY` in the local inference API terminal before starting `uvicorn backend.src.api.main:app --port 8001`. Its default model is `gemini-3.8-flash`; `GEMINI_MODEL` can override it. Install its dependencies with `pip install -r requirements-api.txt` in the inference virtual environment. A missing key or Gemini request error triggers the local YOLO checkpoint at `backend/models/weights/best.pt` (`MODEL_PATH` can override this).
+- Set `DEMO_MODE=false` to use live inference. Start the local inference API with `uvicorn backend.src.api.main:app --port 8001`. Install its dependencies with `pip install -r requirements-api.txt` in the inference virtual environment. The inference server uses the local YOLO checkpoint at `backend/models/weights/best.pt` (`MODEL_PATH` can override this).
 - `NEXT_PUBLIC_CARTO_API_KEY` with the key requested from https://carto.com/basemaps/apikey/ for the map tiles.
 *(Note: Do not commit `.env` to Git).*
 
