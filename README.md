@@ -68,12 +68,14 @@ anveshan/
 ## 8. Final Presentation
 
 You can view our final SIH presentation here:
-[Final Presentation (Google Slides)](https://docs.google.com/presentation/d/1ynVbKB8ut9x5ZKoR_NL1yw7DKevzT_QI/edit?usp=sharing&ouid=104635454528691631841&rtpof=true&sd=true)
+- [Presentation Document (submission/PRESENTATION.md)](submission/PRESENTATION.md)
+- [Final Presentation (Google Drive)](https://drive.google.com/file/d/19-RHU_NIxcYqBWqdLECiIdS_22nLlQrc/view?usp=sharing)
 
 ## 9. Demo Video
 
 You can watch the full demo of our project here:
-[Demo Video (Google Drive)](https://drive.google.com/file/d/1TayU_LuoYKk8IZuOyDH-MOXz0vyDdqnf/view?usp=drivesdk)
+- [Demo Video Document (submission/DEMO.md)](submission/DEMO.md)
+- [Demo Video (Google Drive)](https://drive.google.com/file/d/1TayU_LuoYKk8IZuOyDH-MOXz0vyDdqnf/view?usp=drivesdk)
 
 ## 10. Screenshots / Prototype Photos
 
