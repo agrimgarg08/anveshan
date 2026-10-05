@@ -94,12 +94,14 @@ async def process_image(file: UploadFile = File(...)):
         cleaned_image = clean(raw_image)
         
         # 2. Inference or filename-matched demo results
-        demo_mode = os.getenv("DEMO_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
+        env_demo_mode = os.getenv("DEMO_MODE", "false").strip().lower() in {"1", "true", "yes", "on"}
+        demo_result = load_demo_results(file.filename or "")
+        demo_mode = env_demo_mode or (demo_result is not None)
+        
         demo_scenario = None
         detection_source = 'demo' if demo_mode else None
         fallback_reason = None
         if demo_mode:
-            demo_result = load_demo_results(file.filename or "")
             if demo_result is None:
                 expected = ", ".join(f"{name}.png/jpg" for name in expected_demo_filenames())
                 raise HTTPException(
