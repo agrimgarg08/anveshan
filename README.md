@@ -75,7 +75,7 @@ You can view our final SIH presentation here:
 
 You can watch the full demo of our project here:
 - [Demo Video Document (submission/DEMO.md)](submission/DEMO.md)
-- [Demo Video (Google Drive)](https://drive.google.com/file/d/1TayU_LuoYKk8IZuOyDH-MOXz0vyDdqnf/view?usp=drivesdk)
+- [Demo Video (YouTube)](https://youtu.be/FBqvPXlQbHk)
 
 ## 10. Screenshots / Prototype Photos
 
@@ -105,9 +105,11 @@ npm install
 **Environment Variables:**
 Copy `.env.example` to `.env`, then set:
 - `INFERENCE_API_URL` with your local inference tunnel URL ending in `/detect`.
-- Set `DEMO_MODE=false` to use live inference. Start the local inference API with `uvicorn backend.src.api.main:app --port 8001`. Install its dependencies with `pip install -r requirements-api.txt` in the inference virtual environment. The inference server uses the local YOLO checkpoint at `backend/models/weights/best.pt` (`MODEL_PATH` can override this).
+- Set `DEMO_MODE=false` to enable live inference for images without a matching demo filename. Start the inference API with `uvicorn backend.src.api.main:app --port 8001`. Install its dependencies with `pip install -r requirements-api.txt` in the inference virtual environment. Its local checkpoint belongs at `backend/models/weights/best.pt` (`MODEL_PATH` can override this).
 - `NEXT_PUBLIC_CARTO_API_KEY` with the key requested from https://carto.com/basemaps/apikey/ for the map tiles.
 *(Note: Do not commit `.env` to Git).*
+
+**Model download and evaluation:** Download [best.pt (release v.0.1.0)](https://github.com/agrimgarg08/anveshan/releases/download/v.0.1.0/best.pt) and place it at `backend/models/weights/best.pt`. See [Model setup](docs/model_setup.md) for installation, checksum verification, and a local evaluation workflow. Reports can contain numeric scores or qualitative confidence labels; neither establishes measured model accuracy.
 
 ## 12. Run
 

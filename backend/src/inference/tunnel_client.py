@@ -26,8 +26,19 @@ def predict(image: np.ndarray, api_url: str, original_image: np.ndarray | None =
     payload = response.json()
     if not isinstance(payload, dict) or not isinstance(payload.get('detections'), list):
         raise ValueError('Inference API returned an invalid detection response.')
+    # Normalize older server responses before they reach reports or exports.
+    source = payload.get('source', 'local_yolo')
+    source = source if source in {'local_yolo', 'demo'} else 'remote_vision'
+    reason = payload.get('fallback_reason')
+    if reason is not None:
+        if isinstance(reason, str) and reason.startswith('invalid_'):
+            reason = 'invalid_remote_response'
+        elif isinstance(reason, str) and '_http_' in reason and reason.rsplit('_http_', 1)[1].isdigit():
+            reason = 'remote_http_' + reason.rsplit('_http_', 1)[1]
+        elif reason != 'missing_api_key':
+            reason = 'remote_inference_error'
     return {
         'detections': payload['detections'],
-        'source': payload.get('source', 'local_yolo'),
-        'fallback_reason': payload.get('fallback_reason'),
+        'source': source,
+        'fallback_reason': reason,
     }

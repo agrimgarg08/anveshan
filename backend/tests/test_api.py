@@ -12,7 +12,8 @@ import numpy as np
 from PIL import Image
 
 from backend.src.api.main import CLASSES, MAX_BYTES, create_app
-from backend.src.api.detection_with_fallback import detect_gemini
+from backend.src.api.detection_with_fallback import detect_remote
+from backend.src.inference.tunnel_client import predict as predict_tunnel
 
 
 class ApiTests(unittest.TestCase):
@@ -84,30 +85,30 @@ class ApiTests(unittest.TestCase):
             response = client.post("/detect", files={"file": ("sonar.png", buffer.getvalue(), "image/png")})
             self.assertEqual(response.status_code, 503)
 
-    def test_gemini_response_does_not_load_yolo(self):
-        with patch("backend.src.api.main.detect_gemini", return_value=[{
+    def test_remote_response_does_not_load_yolo(self):
+        with patch("backend.src.api.main.detect_remote", return_value=[{
             "class": "shipwreck", "confidence": None, "confidence_label": "high",
             "bbox": [10, 20, 30, 40],
         }]):
             response = self.upload()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["source"], "gemini")
+        self.assertEqual(response.json()["source"], "remote_vision")
         self.assertIsNone(response.json()["detections"][0]["confidence"])
         self.assertIsNone(self.client.app.state.model)
 
-    def test_gemini_coordinates_and_qualitative_confidence(self):
+    def test_remote_coordinates_and_qualitative_confidence(self):
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             with patch("google.genai.Client") as client_class:
                 client_class.return_value.models.generate_content.return_value.text = (
                     '[{"label":"shipwreck","confidence":"high","box_2d":[100,200,600,700]}]'
                 )
-                result = detect_gemini(Image.new("RGB", (200, 100)), (640, 640))
+                result = detect_remote(Image.new("RGB", (200, 100)), (640, 640))
         self.assertEqual(result, [{
             "class": "shipwreck", "confidence": None, "confidence_label": "high",
             "bbox": [128.0, 64.0, 320.0, 320.0],
         }])
 
-    def test_invalid_gemini_box_uses_local_model(self):
+    def test_invalid_remote_box_uses_local_model(self):
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             with patch("google.genai.Client") as client_class:
                 client_class.return_value.models.generate_content.return_value.text = (
@@ -115,13 +116,35 @@ class ApiTests(unittest.TestCase):
                 )
                 result = self.upload().json()
         self.assertEqual(result["source"], "local_yolo")
-        self.assertEqual(result["fallback_reason"], "invalid_gemini_response")
+        self.assertEqual(result["fallback_reason"], "invalid_remote_response")
 
     def test_missing_weights_fail_startup(self):
         with patch.dict(os.environ, {"MODEL_PATH": str(Path(self.tmp.name) / "missing.pt")}):
             with self.assertRaisesRegex(RuntimeError, "Missing trained weights"):
                 with TestClient(create_app()):
                     pass
+
+
+class TunnelAdapterTests(unittest.TestCase):
+    def test_legacy_provider_labels_are_normalized(self):
+        with patch('backend.src.inference.tunnel_client.requests.post') as post:
+            post.return_value.json.return_value = {
+                'detections': [], 'source': 'legacy_provider',
+                'fallback_reason': None,
+            }
+            result = predict_tunnel(np.zeros((20, 20), dtype=np.uint8), 'https://example.test/detect')
+        self.assertEqual(result['source'], 'remote_vision')
+        self.assertIsNone(result['fallback_reason'])
+
+    def test_legacy_fallback_reason_is_normalized(self):
+        with patch('backend.src.inference.tunnel_client.requests.post') as post:
+            post.return_value.json.return_value = {
+                'detections': [], 'source': 'local_yolo',
+                'fallback_reason': 'legacy_http_429',
+            }
+            result = predict_tunnel(np.zeros((20, 20), dtype=np.uint8), 'https://example.test/detect')
+        self.assertEqual(result['source'], 'local_yolo')
+        self.assertEqual(result['fallback_reason'], 'remote_http_429')
 
 
 if __name__ == "__main__":

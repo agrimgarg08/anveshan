@@ -122,8 +122,8 @@ async def process_image(file: UploadFile = File(...)):
                 detection_source = inference['source']
                 fallback_reason = inference['fallback_reason']
                 detections = inference['detections']
-                if detection_source == 'gemini':
-                    # Gemini's high/medium/low words are not numeric probabilities.
+                if detection_source == 'remote_vision':
+                    # High/medium/low words are not numeric probabilities.
                     refined = [{**d, 'final_confidence': None, 'flagged_for_review': True}
                                for d in detections]
                 else:

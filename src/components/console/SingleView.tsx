@@ -147,8 +147,7 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
         {activeItem.status === 'done' && activeItem.data && (
           <div>
             <p className="mb-4 text-xs text-slate-600 dark:text-slate-400">
-              Detected via: {activeItem.data.source === 'gemini' ? 'Gemini' : activeItem.data.source === 'local_yolo' ? 'local YOLO' : 'demo data'}
-              {activeItem.data.fallback_reason && ` (fallback: ${activeItem.data.fallback_reason})`}
+              {activeItem.data.source === 'demo' ? 'Prepared demo results' : 'Analysis complete — review highlighted candidates.'}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">

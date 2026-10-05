@@ -1,4 +1,4 @@
-"""Gemini-first inference with a local YOLO fallback."""
+"""Remote inference with a local YOLO fallback."""
 
 from contextlib import asynccontextmanager
 from io import BytesIO
@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, UnidentifiedImageError
 
-from .detection_with_fallback import detect_gemini, fallback_reason
+from .detection_with_fallback import detect_remote, fallback_reason
 
 CLASSES = {0: "marine_anomaly"}
 ROOT = Path(__file__).resolve().parents[2]
@@ -70,7 +70,7 @@ def create_app(model_loader=load_model):
         except (UnidentifiedImageError, OSError, ValueError):
             raise HTTPException(400, "Invalid or corrupt image") from None
 
-        gemini_image = processed
+        remote_image = processed
         if original is not None:
             original_content = original.file.read(MAX_BYTES + 1)
             if len(original_content) > MAX_BYTES:
@@ -81,16 +81,16 @@ def create_app(model_loader=load_model):
                         raise HTTPException(415, "Use a PNG or JPEG original image")
                     if image.width * image.height > MAX_PIXELS:
                         raise HTTPException(413, "Original image exceeds 16 million pixels")
-                    gemini_image = image.convert("RGB")
+                    remote_image = image.convert("RGB")
             except Image.DecompressionBombError:
                 raise HTTPException(413, "Original image is too large") from None
             except (UnidentifiedImageError, OSError, ValueError):
                 raise HTTPException(400, "Invalid or corrupt original image") from None
 
         try:
-            detections = detect_gemini(gemini_image, (width, height))
+            detections = detect_remote(remote_image, (width, height))
             return {"detections": detections, "image": {"width": width, "height": height},
-                    "source": "gemini", "fallback_reason": None}
+                    "source": "remote_vision", "fallback_reason": None}
         except Exception as error:
             reason = fallback_reason(error)
 
