@@ -1,6 +1,5 @@
 """Tunnel API adapter for Anveshan detections."""
 
-import base64
 import cv2
 import requests
 import numpy as np
@@ -20,7 +19,8 @@ def predict(image: np.ndarray, api_url: str, original_image: np.ndarray | None =
         if not success:
             raise RuntimeError('Could not encode original image for inference.')
         files['original'] = ('original.png', original_encoded.tobytes(), 'image/png')
-    response = requests.post(api_url, files=files, timeout=35.0)
+    # Leave room for the remote call and a cold local-model fallback.
+    response = requests.post(api_url, files=files, timeout=75.0)
     response.raise_for_status()
 
     payload = response.json()
@@ -35,10 +35,11 @@ def predict(image: np.ndarray, api_url: str, original_image: np.ndarray | None =
             reason = 'invalid_remote_response'
         elif isinstance(reason, str) and '_http_' in reason and reason.rsplit('_http_', 1)[1].isdigit():
             reason = 'remote_http_' + reason.rsplit('_http_', 1)[1]
-        elif reason != 'missing_api_key':
+        elif reason not in {'missing_api_key', 'remote_empty', 'remote_timeout'}:
             reason = 'remote_inference_error'
     return {
         'detections': payload['detections'],
         'source': source,
         'fallback_reason': reason,
+        'request_id': payload.get('request_id'),
     }

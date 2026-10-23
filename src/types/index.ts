@@ -30,6 +30,7 @@ export interface ReportData {
   message?: string;
   source?: string | null;
   fallback_reason?: string | null;
+  request_id?: string | null;
   cleaned_image?: string; // base64 string
   detections?: Detection[];
   report?: ReportEntry[];

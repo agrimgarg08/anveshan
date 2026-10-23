@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { Map as MapIcon, Target, Navigation, Maximize, X, Layers, AlertTriangle, Activity } from 'lucide-react';
+import { Map as MapIcon, Target, Navigation, Maximize, X, Layers, Activity } from 'lucide-react';
 
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
@@ -29,6 +29,7 @@ export default function GroupedAnalytics({ processedCount, totalQueue, globalRep
   const displayedReport = selectedCategories.length > 0
     ? globalReport.filter(r => selectedCategories.includes(r.image_class.replace(/_/g, ' ')))
     : globalReport;
+  const localScores = globalReport.filter(r => r.source === 'local_yolo' && r.confidence != null);
 
   const handleToggleMaximize = async () => {
     // 1. Fade out and slide up (like exit transition)
@@ -144,9 +145,9 @@ export default function GroupedAnalytics({ processedCount, totalQueue, globalRep
 
             <div className="flex flex-col gap-1 pl-2 sm:pl-4">
               <p className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
-                {globalReport.some(r => r.confidence != null) ? `${(globalReport.reduce((acc, curr) => acc + (curr.confidence ?? 0), 0) / globalReport.filter(r => r.confidence != null).length).toFixed(1)}%` : 'N/A'}
+                {localScores.length ? (localScores.reduce((acc, curr) => acc + (curr.confidence ?? 0), 0) / localScores.length / 100).toFixed(2) : 'N/A'}
               </p>
-              <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Avg Confidence</p>
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Avg Local Model Score</p>
             </div>
           </div>
         </div>

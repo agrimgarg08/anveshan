@@ -19,7 +19,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src
 
 from preprocessing.clean_sonar import clean
 from inference.tunnel_client import predict
-from confidence_filter.confidence_filter import refine_detections
 from geotagging.report_generator import generate_simulated_metadata, build_report
 from demo.csv_results import expected_demo_filenames, load_demo_results
 
@@ -101,6 +100,7 @@ async def process_image(file: UploadFile = File(...)):
         demo_scenario = None
         detection_source = 'demo' if demo_mode else None
         fallback_reason = None
+        request_id = None
         if demo_mode:
             if demo_result is None:
                 expected = ", ".join(f"{name}.png/jpg" for name in expected_demo_filenames())
@@ -121,13 +121,21 @@ async def process_image(file: UploadFile = File(...)):
                 inference = predict(cleaned_image, api_url, np.array(original_rgb)[:, :, ::-1].copy())
                 detection_source = inference['source']
                 fallback_reason = inference['fallback_reason']
+                request_id = inference.get('request_id')
                 detections = inference['detections']
                 if detection_source == 'remote_vision':
                     # High/medium/low words are not numeric probabilities.
                     refined = [{**d, 'final_confidence': None, 'flagged_for_review': True}
                                for d in detections]
                 else:
-                    refined = refine_detections(cleaned_image, detections)
+                    # Preserve the detector's score without presenting a
+                    # contour heuristic as confidence or accuracy. Local
+                    # candidates remain review-required until validated.
+                    refined = [{
+                        **d,
+                        'final_confidence': round(float(d['confidence']) * 100, 1),
+                        'flagged_for_review': True,
+                    } for d in detections]
             except (ValueError, RuntimeError, requests.RequestException) as e:
                 raise HTTPException(status_code=502, detail=f"Tunnel inference failed: {e}") from e
         
@@ -178,17 +186,19 @@ async def process_image(file: UploadFile = File(...)):
                 } if demo_mode else {}),
             })
             
+        analysis_width = cleaned_image.shape[1] if demo_mode else original_rgb.width
+        analysis_height = cleaned_image.shape[0] if demo_mode else original_rgb.height
         report = build_report(
             report_detections,
             ping_metadata,
-            image_width_px=cleaned_image.shape[1],
-            image_height_px=cleaned_image.shape[0]
+            image_width_px=analysis_width,
+            image_height_px=analysis_height
         )
         
         return JSONResponse({
             "cleaned_image": numpy_to_base64(cleaned_image),
-            "width": cleaned_image.shape[1],
-            "height": cleaned_image.shape[0],
+            "width": analysis_width,
+            "height": analysis_height,
             "detections": report_detections,
             "report": [asdict(entry) for entry in report],
             "demo_mode": demo_mode,
@@ -196,6 +206,7 @@ async def process_image(file: UploadFile = File(...)):
             "is_real_location": is_real_location,
             "source": detection_source,
             "fallback_reason": fallback_reason,
+            "request_id": request_id,
         })
         
     except HTTPException:

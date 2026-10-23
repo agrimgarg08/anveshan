@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, AlertTriangle, MapIcon, Target, CheckCircle, Navigation, Image as ImageIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, AlertTriangle, MapIcon, Target, Navigation } from 'lucide-react';
 import { QueueItem, ReportEntry } from '@/types';
 import type { Map as LeafletMap } from 'leaflet';
 
@@ -59,7 +59,7 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
 
   useEffect(() => {
     if (activeItem && canvasRef.current) {
-      if (activeItem.status !== 'done' || !activeItem.data || !activeItem.data.cleaned_image) {
+      if (activeItem.status !== 'done' || !activeItem.data) {
         // Clear canvas if not done
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -96,7 +96,11 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
             ctx.setLineDash([]);
             ctx.fillStyle = ctx.strokeStyle;
             ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
-            const confidence = d.confidence == null ? `${d.confidence_label ?? 'unrated'} (qualitative)` : `${d.confidence.toFixed(0)}%`;
+            const confidence = d.confidence == null
+              ? `${d.confidence_label ?? 'unrated'} (qualitative)`
+              : d.source === 'local_yolo'
+                ? `score ${(d.confidence / 100).toFixed(2)}`
+                : `${d.confidence.toFixed(0)}%`;
             const label = `${d.image_class?.replace(/_/g, ' ') || 'Unknown'} ${confidence}`;
             const textMetrics = ctx.measureText(label);
             ctx.fillRect(x, Math.max(0, y - 24), textMetrics.width + 12, 24);
@@ -106,7 +110,9 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
           });
         }
       };
-      img.src = `data:image/png;base64,${activeData.cleaned_image}`;
+      img.src = activeData.source === 'demo' && activeData.cleaned_image
+        ? `data:image/png;base64,${activeData.cleaned_image}`
+        : activeItem.previewUrl;
     }
   }, [activeItem]);
 
@@ -147,7 +153,12 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
         {activeItem.status === 'done' && activeItem.data && (
           <div>
             <p className="mb-4 text-xs text-slate-600 dark:text-slate-400">
-              {activeItem.data.source === 'demo' ? 'Prepared demo results' : 'Analysis complete — review highlighted candidates.'}
+              {activeItem.data.source === 'demo'
+                ? 'Prepared demo results'
+                : activeItem.data.source === 'local_yolo'
+                  ? 'Local model candidates — review every result against the original image.'
+                  : 'Analysis complete — review highlighted candidates; scores are not accuracy rates.'}
+              {activeItem.data.request_id && <> Request ID: <span className="font-mono">{activeItem.data.request_id}</span>.</>}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
@@ -220,7 +231,7 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
                     const customIcon = leafletLib ? leafletLib.divIcon({ html: iconHtml, className: '', iconSize: [16, 16], iconAnchor: [8, 8] }) : undefined;
                     return (
                       <Marker key={entry.detection_id} position={[entry.latitude, entry.longitude]} icon={customIcon}>
-                        <Popup><div className="font-semibold capitalize text-slate-900">{entry.image_class.replace(/_/g, ' ')}</div><div className="text-slate-600">{entry.confidence == null ? `Qualitative: ${entry.confidence_label ?? 'unrated'}` : `${entry.confidence.toFixed(1)}%`}</div></Popup>
+                        <Popup><div className="font-semibold capitalize text-slate-900">{entry.image_class.replace(/_/g, ' ')}</div><div className="text-slate-600">{entry.confidence == null ? `Qualitative: ${entry.confidence_label ?? 'unrated'}` : entry.source === 'local_yolo' ? `Model score: ${(entry.confidence / 100).toFixed(2)}` : `${entry.confidence.toFixed(1)}%`}</div></Popup>
                       </Marker>
                     );
                   })}
@@ -249,7 +260,11 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
                         <p className="font-semibold text-sm text-slate-900 dark:text-slate-200 capitalize leading-none">{entry.image_class.replace(/_/g, ' ')}</p>
                         <span className="text-[10px] font-mono text-slate-500 leading-none">{entry.detection_id}</span>
                       </div>
-                      <div className="text-xl font-semibold text-slate-800 dark:text-slate-100">{entry.confidence == null ? entry.confidence_label ?? 'unrated' : <>{entry.confidence.toFixed(0)}<span className="text-sm text-slate-500 font-medium ml-0.5">%</span></>}</div>
+                      <div className="text-xl font-semibold text-slate-800 dark:text-slate-100">{entry.confidence == null
+                        ? entry.confidence_label ?? 'unrated'
+                        : entry.source === 'local_yolo'
+                          ? <><span className="text-sm">score</span> {(entry.confidence / 100).toFixed(2)}</>
+                          : <>{entry.confidence.toFixed(0)}<span className="text-sm text-slate-500 font-medium ml-0.5">%</span></>}</div>
                     </motion.div>
                   ))}
                 </div>
@@ -261,9 +276,9 @@ export default function SingleView({ activeItem, mapTheme, cartoTileUrl, leaflet
                   transition={{ duration: 0.3 }}
                   className="h-full flex flex-col items-center justify-center text-slate-500 text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 bg-slate-50 dark:bg-slate-900/30"
                 >
-                  <CheckCircle size={32} className="text-emerald-500/50 mb-3" />
-                  <p className="font-medium text-slate-700 dark:text-slate-300">All Clear</p>
-                  <p className="mt-1 text-center">No targets detected matching the anomaly threshold.</p>
+                  <AlertTriangle size={32} className="text-amber-500/70 mb-3" />
+                  <p className="font-medium text-slate-700 dark:text-slate-300">No candidates returned</p>
+                  <p className="mt-1 text-center">This does not confirm the seafloor is clear. Inspect the original image.{activeItem.data.request_id ? ` Request ${activeItem.data.request_id} can be matched to the inference log.` : ''}</p>
                 </motion.div>
               )}
             </div>
